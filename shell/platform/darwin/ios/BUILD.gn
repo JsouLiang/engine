@@ -135,6 +135,7 @@ shared_library("create_flutter_framework_dylib") {
     "OpenGLES.framework",
     "AudioToolbox.framework",
     "QuartzCore.framework",
+    "JavascriptCore.framework",
   ]
 }
 

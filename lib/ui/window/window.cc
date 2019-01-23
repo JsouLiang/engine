@@ -121,6 +121,88 @@ void _RespondToPlatformMessage(Dart_NativeArguments args) {
   tonic::DartCallStatic(&RespondToPlatformMessage, args);
 }
 
+
+
+void initJSContext(Dart_Handle window) {
+  UIDartState::Current()->window()->initJSExecutor();
+}
+
+void _initJSContext(Dart_NativeArguments args) {
+  tonic::DartCallStatic(&initJSContext, args);
+}
+
+void releaseJSContext(Dart_Handle window) {
+  UIDartState::Current()->window()->releaseJSExecutor();
+}
+
+void _releaseJSContext(Dart_NativeArguments args) {
+  tonic::DartCallStatic(&releaseJSContext, args);
+}
+
+void execJavaScript(Dart_Handle window, const std::u16string &script, const std::u16string &sourceUrl) {
+  std::string exception;
+  UIDartState::Current()->window()->jsExecutor()->ExecJavaScript(script, sourceUrl, exception);
+  if (exception.length() > 0) {
+    Dart_PropagateError(Dart_NewUnhandledExceptionError(ToDart(exception)));
+  }
+}
+
+void _execJavaScript(Dart_NativeArguments args) {
+  tonic::DartCallStatic(&execJavaScript, args);
+}
+
+Dart_Handle evalJavaScript(Dart_Handle window, const std::u16string &script, const std::u16string &sourceUrl) {
+  std::string exception;
+  Dart_Handle ret = UIDartState::Current()->window()->jsExecutor()->EvalJavaScript(script, sourceUrl, exception);
+  if (exception.length() > 0) {
+    Dart_PropagateError(Dart_NewUnhandledExceptionError(ToDart(exception)));
+  }
+  return ret;
+}
+
+void _evalJavaScript(Dart_NativeArguments args) {
+  tonic::DartCallStatic(&evalJavaScript, args);
+}
+
+void setGlobalVariable(Dart_Handle window, const std::u16string &name, Dart_Handle value) {
+  std::string exception;
+  UIDartState::Current()->window()->jsExecutor()->SetGlobalVariable(name, value, exception);
+  if (exception.length() > 0) {
+    Dart_PropagateError(Dart_NewUnhandledExceptionError(ToDart(exception)));
+  }
+}
+
+void _setGlobalVariable(Dart_NativeArguments args) {
+  tonic::DartCallStatic(&setGlobalVariable, args);
+}
+
+Dart_Handle invokeMethod(Dart_Handle window, const std::u16string &objName, const std::u16string &function,
+                         Dart_Handle arguments) {
+  std::string exception;
+  Dart_Handle ret = UIDartState::Current()->window()->jsExecutor()->InvokeMethod(objName, function, arguments,
+                                                                                 exception);
+  if (exception.length() > 0) {
+    Dart_PropagateError(Dart_NewUnhandledExceptionError(ToDart(exception)));
+  }
+  return ret;
+}
+
+void _invokeMethod(Dart_NativeArguments args) {
+  tonic::DartCallStatic(&invokeMethod, args);
+}
+
+void addJavaScriptInterface(Dart_Handle window, const std::u16string &name, Dart_Handle interface) {
+  std::string exception;
+  UIDartState::Current()->window()->jsExecutor()->AddJavaScriptInterface(name, interface, exception);
+  if (exception.length() > 0) {
+    Dart_PropagateError(Dart_NewUnhandledExceptionError(ToDart(exception)));
+  }
+}
+
+void _addJavaScriptInterface(Dart_NativeArguments args) {
+  tonic::DartCallStatic(&addJavaScriptInterface, args);
+}
+
 }  // namespace
 
 Dart_Handle ToByteData(const std::vector<uint8_t>& buffer) {
@@ -318,7 +400,26 @@ void Window::RegisterNatives(tonic::DartLibraryNatives* natives) {
       {"Window_render", Render, 2, true},
       {"Window_updateSemantics", UpdateSemantics, 2, true},
       {"Window_setIsolateDebugName", SetIsolateDebugName, 2, true},
+      
+      {"Window_initJSContext",          _initJSContext,          1, true},
+      {"Window_releaseJSContext",       _releaseJSContext,       1, true},
+      {"Window_execJavaScript",         _execJavaScript,         3, true},
+      {"Window_evalJavaScript",         _evalJavaScript,         3, true},
+      {"Window_setGlobalVariable",      _setGlobalVariable,      3, true},
+      {"Window_invokeMethod",           _invokeMethod,           4, true},
+      {"Window_addJavaScriptInterface", _addJavaScriptInterface, 3, true},
   });
 }
 
+void Window::initJSExecutor() {
+  if (!jsExecutor_) {
+    jsExecutor_ = std::make_unique<JSExecutor>();
+  }
+}
+
+void Window::releaseJSExecutor() {
+  if (!jsExecutor_) {
+    jsExecutor_ = nullptr;
+  }
+}
 }  // namespace blink

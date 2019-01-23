@@ -16,6 +16,7 @@
 #include "flutter/lib/ui/window/viewport_metrics.h"
 #include "third_party/skia/include/gpu/GrContext.h"
 #include "third_party/tonic/dart_persistent_value.h"
+#include "flutter/lib/ui/window/js_executor.h"
 
 namespace tonic {
 class DartLibraryNatives;
@@ -80,10 +81,19 @@ class Window final {
 
   static void RegisterNatives(tonic::DartLibraryNatives* natives);
 
+  void initJSExecutor();
+
+  void releaseJSExecutor();
+
+  JSExecutor* jsExecutor() const { return jsExecutor_.get(); }
+
  private:
   WindowClient* client_;
   tonic::DartPersistentValue library_;
   ViewportMetrics viewport_metrics_;
+
+
+  std::unique_ptr<JSExecutor> jsExecutor_;
 
   // We use id 0 to mean that no response is expected.
   int next_response_id_ = 1;

@@ -96,6 +96,9 @@ source_set("ui") {
     "window/viewport_metrics.h",
     "window/window.cc",
     "window/window.h",
+    "window/js_executor.cc",
+    "window/js_executor.h",
+    "window/JSRetainPtr1.h",
   ]
 
   public_configs = [ "$flutter_root:config" ]
@@ -118,4 +121,16 @@ source_set("ui") {
   public_deps = [
     "$flutter_root/third_party/txt",
   ]
+
+  if (is_android || target_os == host_os) {
+    public_deps += [
+      "//third_party/android-jsc",
+    ]
+  }
+
+  if (is_ios || is_mac) {
+    libs=[
+      "JavascriptCore.framework",
+    ]
+  }
 }

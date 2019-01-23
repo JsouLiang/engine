@@ -854,6 +854,54 @@ class Window {
       registrationZone.runUnaryGuarded(callback, data);
     };
   }
+
+
+
+  bool _jsContextInitialized = false;
+  bool get jsEnabled => _jsContextInitialized;
+  set jsEnabled(bool enable) {
+    if (enable && !_jsContextInitialized) {
+      _initJSContext();
+    }
+    if (!enable && _jsContextInitialized) {
+      _releaseJSContext();
+    }
+  }
+
+  void _initJSContext() native 'Window_initJSContext';
+
+  void _releaseJSContext() native 'Window_releaseJSContext';
+
+  void execJavaScript(String script, String sourceUrl) {
+    jsEnabled = true;
+    _execJavaScript(script, sourceUrl);
+  }
+  void _execJavaScript(String script, String sourceUrl) native 'Window_execJavaScript';
+
+  dynamic evalJavaScript(String script, String sourceUrl) {
+    jsEnabled = true;
+    return _evalJavaScript(script, sourceUrl);
+  }
+  dynamic _evalJavaScript(String script, String sourceUrl) native 'Window_evalJavaScript';
+
+  void setGlobalVariable(String name, dynamic value) {
+    jsEnabled = true;
+    _setGlobalVariable(name, value);
+  }
+  void _setGlobalVariable(String name, dynamic value) native 'Window_setGlobalVariable';
+
+  dynamic invokeMethod(String objName, String function, dynamic arguments) {
+    jsEnabled = true;
+    return _invokeMethod(objName, function, arguments);
+  }
+  dynamic _invokeMethod(String objName, String function, dynamic arguments) native 'Window_invokeMethod';
+
+  void addJavaScriptInterface(String name, JavaScriptInterface handler) {
+    jsEnabled = true;
+    _addJavaScriptInterface(name, handler);
+  }
+  void _addJavaScriptInterface(String name, JavaScriptInterface handler) native 'Window_addJavaScriptInterface';
+
 }
 
 /// Additional accessibility features that may be enabled by the platform.
@@ -924,6 +972,8 @@ class AccessibilityFeatures {
   int get hashCode => _index.hashCode;
 }
 
+
+typedef dynamic JavaScriptInterface(List arguments);
 /// The [Window] singleton. This object exposes the size of the display, the
 /// core scheduler API, the input event callback, the graphics drawing API, and
 /// other such core services.
