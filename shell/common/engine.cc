@@ -251,6 +251,8 @@ void Engine::SetViewportMetrics(const blink::ViewportMetrics& metrics) {
 
 void Engine::DispatchPlatformMessage(
     fml::RefPtr<blink::PlatformMessage> message) {
+    FML_LOG(ERROR) << " ==== Engine::DispatchPlatformMessage ==== " << message->channel();
+
   if (message->channel() == kLifecycleChannel) {
     if (HandleLifecyclePlatformMessage(message.get()))
       return;
@@ -260,6 +262,10 @@ void Engine::DispatchPlatformMessage(
   } else if (message->channel() == kSettingsChannel) {
     HandleSettingsPlatformMessage(message.get());
     return;
+  } else if (message->channel() == kNavigationChannel) {
+    if (HandleInitialRoutePlatformMessage(std::move(message))) {
+      return;
+    }
   }
 
   if (runtime_controller_->IsRootIsolateRunning() &&
@@ -267,9 +273,15 @@ void Engine::DispatchPlatformMessage(
     return;
   }
 
-  // If there's no runtime_, we may still need to set the initial route.
-  if (message->channel() == kNavigationChannel)
-    HandleNavigationPlatformMessage(std::move(message));
+  // // If there's no runtime_, we may still need to set the initial route.
+  // if (message->channel() == kNavigationChannel)
+  //   HandleNavigationPlatformMessage(std::move(message));
+
+      // TODO(kangwang1988): Do the job below when we need to deliver `platform to
+  if (message->channel() == kNavigationChannel) {
+  }
+  FML_LOG(ERROR) << " ==== Engine::DispatchPlatformMessage end ==== ";
+
 }
 
 bool Engine::HandleLifecyclePlatformMessage(blink::PlatformMessage* message) {
@@ -294,9 +306,10 @@ bool Engine::HandleLifecyclePlatformMessage(blink::PlatformMessage* message) {
   return false;
 }
 
-bool Engine::HandleNavigationPlatformMessage(
+bool Engine::HandleInitialRoutePlatformMessage(
     fml::RefPtr<blink::PlatformMessage> message) {
   const auto& data = message->data();
+  FML_LOG(ERROR) << " ==== Engine::HandleInitialRoutePlatformMessage ==== " << data.data();
 
   rapidjson::Document document;
   document.Parse(reinterpret_cast<const char*>(data.data()), data.size());

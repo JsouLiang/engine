@@ -1,0 +1,43 @@
+# Copyright 2013 The Flutter Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("jsc") {
+  sources = [
+    "shell/JSValue.h",
+    "shell/JSValue.cc",
+  ]
+
+  public_configs = [ "$flutter_root:config" ]
+
+  deps = [
+    "$flutter_root/assets",
+    "$flutter_root/common",
+    "$flutter_root/flow",
+    "$flutter_root/fml",
+    "$flutter_root/runtime:test_font",
+    "//third_party/dart/runtime/bin:dart_io_api",
+    "//third_party/rapidjson",
+    "//third_party/skia",
+    "//third_party/tonic",
+  ]
+  if (is_fuchsia) {
+    deps += [ "//topaz/public/dart-pkg/zircon" ]
+  }
+
+  public_deps = [
+    "$flutter_root/third_party/txt",
+  ]
+
+  if (is_android || target_os == host_os) {
+    public_deps += [
+      "//third_party/android-jsc",
+    ]
+  }
+
+  if (is_ios || is_mac) {
+    libs=[
+      "JavascriptCore.framework",
+    ]
+  }
+}

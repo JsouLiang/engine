@@ -1,0 +1,7 @@
+
+dart_jsc_files = [
+  "$flutter_root/lib/jsc/JSValue.dart",
+
+]
+
+dart_jsc_path = "$flutter_root/lib/jsc/JSCore.dart"

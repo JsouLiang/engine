@@ -118,8 +118,9 @@ allowed_hosts = [
 
 deps = {
   'src': 'https://github.com/flutter/buildroot.git' + '@' + '5f54a3e98dea0a79589820527658b49fef7916ea',
+  
+  'src/third_party/android-jsc':"http://liangting02@git.sankuai.com/scm/~liangting02/android-jsc.git",
 
-  #'src/third_party/android-jsc':"http://liangting02@git.sankuai.com/scm/~lishaojie02/android-jsc-api.git",
    # Fuchsia compatibility
    #
    # The dependencies in this section should match the layout in the Fuchsia gn
