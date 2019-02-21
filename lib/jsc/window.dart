@@ -972,8 +972,7 @@ class AccessibilityFeatures {
   int get hashCode => _index.hashCode;
 }
 
-
-typedef dynamic JavaScriptInterface(List arguments);
+typedef JavaScriptInterface = dynamic Function(List<dynamic> arguments);
 /// The [Window] singleton. This object exposes the size of the display, the
 /// core scheduler API, the input event callback, the graphics drawing API, and
 /// other such core services.

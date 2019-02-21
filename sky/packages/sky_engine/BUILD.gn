@@ -16,6 +16,7 @@ import("//third_party/dart/sdk/lib/typed_data/typed_data_sources.gni")
 
 import("$flutter_root/build/dart/rules.gni")
 import("$flutter_root/lib/ui/dart_ui.gni")
+import("$flutter_root/lib/jsc/dart_jsc.gni")
 
 if (!is_fuchsia) {
   copy("copy_sky_engine_authors") {
@@ -108,6 +109,14 @@ copy("copy_dart_ui") {
   ]
 }
 
+copy("copy_dart_jsc"){
+  sources = dart_jsc_files
+
+  outputs = [
+      "$root_gen_dir/dart-pkg/sky_engine/lib/jsc/{{source_file_part}}",
+  ]
+}
+
 group("copy_dart_sdk") {
   deps = [
     ":async",
@@ -136,6 +145,7 @@ dart_pkg("sky_engine") {
   deps = [
     ":copy_dart_sdk",
     ":copy_dart_ui",
+    ":copy_dart_jsc",
   ]
 
   if (!is_fuchsia) {

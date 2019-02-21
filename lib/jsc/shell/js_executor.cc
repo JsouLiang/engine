@@ -115,7 +115,15 @@ JSValueRef DartToJS(JSContextRef context, Dart_Handle handle) {
   } else if (Dart_IsString(handle)) {
     const std::u16string &str = tonic::DartConverter<std::u16string>::FromDart(handle);
     value = JSValueMakeString(context, JSStringWrapper(str).ValueRef());
-//  } else if (Dart_IsMap(handle)) {
+ } else if (Dart_IsMap(handle)) {
+  //  Dart_Map
+
+        // if ([object isKindOfClass:[NSArray class]])
+        //     return (ObjcContainerConvertor::Task){ object, JSObjectMakeArray(contextRef, 0, NULL, 0), ContainerArray };
+
+        // if ([object isKindOfClass:[NSDictionary class]])
+        //     return (ObjcContainerConvertor::Task){ object, JSObjectMake(contextRef, 0, 0), ContainerDictionary };
+
 //    JSObjectRef json = JSObjectMake(context, nullptr, nullptr);
 //    Dart_Handle keys = Dart_MapKeys(handle);
 //    long keyCount;
