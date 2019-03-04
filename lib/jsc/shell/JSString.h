@@ -35,7 +35,7 @@ class JSString {
   static long retain(long strRef);
   static void release(long strRef);
   static long getLength(long strRef);
-  static const char * toString(long strRef);
+  static std::u16string toString(long strRef);
   static long getMaximumUTF8CStringSize(long strRef);
   static bool isEqual(long strRef,long strRef1 );
   static bool isEqualToUTF8CString(long strRef,std::string& str) ;

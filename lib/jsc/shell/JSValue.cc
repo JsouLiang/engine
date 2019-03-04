@@ -44,6 +44,7 @@ namespace blink {
   V(JSValue, toObject)    \
   V(JSValue, protect)    \
   V(JSValue, unprotect)    \
+  V(JSValue, toStringValue)    \
   V(JSValue, setException)   
 
   // V(JSValue, isDate)        
@@ -180,6 +181,20 @@ Dart_Handle JSValue::toNumber(long ctxRef, long valueRef) {
   double dret =
       JSValueToNumber((JSContextRef)ctxRef, (JSValueRef)valueRef, &exception);
   return jsc::newCReturnValue(dret, exception);
+}
+
+std::u16string JSValue::toStringValue(long ctxRef, long valueRef) {
+  if (!isUndefined(ctxRef, valueRef) && !isNull(ctxRef, valueRef)) {
+    JSValueRef exception = NULL;
+    JSStringRef s = JSValueToStringCopy((JSContextRef)ctxRef,
+                                           (JSValueRef)valueRef, &exception);
+    if (s != nullptr) {
+      std::u16string u16str{(const char16_t*)JSStringGetCharactersPtr(s), JSStringGetLength(s)};
+      JSStringRelease(s);
+      return u16str;
+    }
+  }
+  return std::u16string{};
 }
 
 Dart_Handle JSValue::toStringCopy(long ctxRef, long valueRef) {

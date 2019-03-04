@@ -26,7 +26,7 @@ class JSException implements Exception {
   ///@param error  The JSValue thrown by the JavaScriptCore engine
   ///
   JSException.fromJSValue(JSValue error) {
-    error = new JSError(error);
+    error = new JSError.fromJSValue(error);
   }
 
   /// Gets the JSValue of the thrown exception

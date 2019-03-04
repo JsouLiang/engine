@@ -4,6 +4,8 @@ dart_jsc_files = [
   "$flutter_root/lib/jsc/JSContext.dart",
   "$flutter_root/lib/jsc/JSObject.dart",
   "$flutter_root/lib/jsc/jsc.dart",
+  "$flutter_root/lib/jsc/JSError.dart",
+  "$flutter_root/lib/jsc/JSException.dart",
 ]
 
 dart_jsc_path = "$flutter_root/lib/jsc/jsc.dart"

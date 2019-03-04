@@ -12,6 +12,7 @@
 #include "third_party/tonic/logging/dart_invoke.h"
 // #include "third_party/tonic/typed_data/dart_byte_data.h"
 #include "flutter/lib/jsc/shell/jsc_utils.h"
+#include "flutter/fml/logging.h"
 
 using tonic::ToDart;
 
@@ -43,14 +44,10 @@ long JSString::getLength(long strRef) {
     return (long)(JSStringGetLength((JSStringRef)strRef));
 }
 
-const char * JSString::toString(long strRef) {
-    return reinterpret_cast<const char *>(JSStringGetCharactersPtr((JSStringRef)strRef));
-    // char *buffer = new char[JSStringGetMaximumUTF8CStringSize((JSStringRef)stringRef)+1];
-    // JSStringGetUTF8CString((JSStringRef)stringRef, buffer,
-    //     JSStringGetMaximumUTF8CStringSize((JSStringRef)stringRef)+1);
-    // jstring ret = env->NewStringUTF(buffer);
-    // delete buffer;
-    // return ret;
+std::u16string JSString::toString(long strRef) {
+    std::u16string u16str{(const char16_t*)JSStringGetCharactersPtr((JSStringRef)strRef), JSStringGetLength((JSStringRef)strRef)};
+    return u16str;
+    // return std::u16string(reinterpret_cast<const char16_t *>(JSStringGetCharactersPtr((JSStringRef)strRef)),JSStringGetLength((JSStringRef)strRef));
 }
 
 long JSString::getMaximumUTF8CStringSize(long strRef) {

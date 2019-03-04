@@ -75,6 +75,8 @@ class JSValue {
   static void protect(long ctxRef, long valueRef);
   static void unprotect(long ctxRef, long valueRef);
   static void setException(long valueRef, long exceptionRefRef);
+  static std::u16string toStringValue(long ctxRef, long valueRef);
+
 };
 }  // namespace blink
 
