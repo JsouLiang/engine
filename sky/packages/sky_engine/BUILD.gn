@@ -113,7 +113,7 @@ copy("copy_dart_jsc"){
   sources = dart_jsc_files
 
   outputs = [
-      "$root_gen_dir/dart-pkg/sky_engine/lib/jsc/{{source_file_part}}",
+    "$root_gen_dir/dart-pkg/sky_engine/lib/jsc/{{source_file_part}}",
   ]
 }
 

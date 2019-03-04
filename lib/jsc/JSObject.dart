@@ -1,10 +1,5 @@
 part of dart.jsc;
 
-// import java.lang.reflect.Method;
-// import java.util.ArrayList;
-// import java.util.List;
-// import java.util.Map;
-
 ///  
 ///  A JavaScript object.
 /// 
@@ -15,12 +10,15 @@ class JSObject extends JSValue {
 //  }
 
   /// Specifies that a property has no special attributes.
-  static int JSPropertyAttributeNone = 0;
+  static const int JSPropertyAttributeNone = 0;
+
   /// Specifies that a property is read-only.
   static int JSPropertyAttributeReadOnly = 1 << 1;
+
   /// Specifies that a property should not be enumerated by
   /// JSPropertyEnumerators and JavaScript for...in loops.
   static int JSPropertyAttributeDontEnum = 1 << 2;
+
   /// Specifies that the delete operation should fail on a property.
   static int JSPropertyAttributeDontDelete = 1 << 3;
 
@@ -36,7 +34,7 @@ class JSObject extends JSValue {
   ///@param ctx The JSContext to create the object in
   ///
   JSObject([JSContext ctx]) {
-    if(ctx == null){
+    if (ctx == null) {
       ///
       /// Called only by convenience subclasses.  If you use
       /// this, you must set context and valueRef yourself.
@@ -44,28 +42,23 @@ class JSObject extends JSValue {
       ///
       return;
     }
-  context = ctx;
-//  context.sync(new Runnable() {
-//  @Override
-//  public void run() {
-  valueRef = make(context.ctxRef(), 0);
-//  }
-//  });
-  context.persistObject(this);
+    context = ctx;
+    valueRef = make(context.ctxRef(), 0);
+    context.persistObject(this);
   }
 
-//
-//  ///
-//  /// Wraps an existing object from JavaScript
-//  ///
-//  /// @param objRef The JavaScriptCore object reference
-//  /// @param ctx    The JSContext of the reference
-//  /// @since 1.0
-//  ///
-//  protected JSObject(final int objRef, JSContext ctx) {
-//  super(objRef, ctx);
-//  context.persistObject(this);
-//  }
+  ///
+  /// Wraps an existing object from JavaScript
+  ///
+  /// @param objRef The JavaScriptCore object reference
+  /// @param ctx    The JSContext of the reference
+  /// @since 1.0
+  ///
+  JSObject.fromValueRef(final int objRef, JSContext ctx)
+      : super.fromValueRef(objRef, ctx) {
+    context.persistObject(this);
+  }
+
 //
 //  ///
 //  /// Creates a new object with function properties set for each method
@@ -120,16 +113,9 @@ class JSObject extends JSValue {
   /// @param prop The property to test the existence of
   /// @return true if the property exists on the object, false otherwise
   ///
-  bool hasProperty(final String prop) {
-  JNIReturnClass runnable = new JNIReturnClass() {
-  @Override
-  public void run() {
-  jni = new JNIReturnObject();
-  jni.bool = hasProperty(context.ctxRef(), valueRef, new JSString(prop).stringRef());
-  }
-  };
-  context.sync(runnable);
-  return runnable.jni.bool;
+  bool hasProperty(String prop) {
+    return _hasProperty(
+        context.ctxRef(), valueRef, new JSString(prop).stringRef);
   }
 
   ///
@@ -138,19 +124,15 @@ class JSObject extends JSValue {
   /// @param prop The name of the property to fetch
   /// @return The JSValue of the property, or null if it does not exist
   ///
-  JSValue property(final String prop) {
-  JNIReturnClass runnable = new JNIReturnClass() {
-  @Override
-  public void run() {
-  jni = getProperty(context.ctxRef(), valueRef, new JSString(prop).stringRef());
-  }
-  };
-  context.sync(runnable);
-  if (runnable.jni.exception != 0) {
-  context.throwJSException(new JSException(new JSValue(runnable.jni.exception, context)));
-  return new JSValue(context);
-  }
-  return new JSValue(runnable.jni.reference, context);
+  JSValue getProperty(final String prop) {
+    final CReturnValue cReturnValue = _getProperty(
+        context.ctxRef(), valueRef, new JSString(prop).stringRef);
+    if (cReturnValue.exception != 0) {
+      context.throwJSException(new JSException.fromJSValue(
+          new JSValue.fromValueRef(cReturnValue.exception, context)));
+      return new JSValue(context);
+    }
+    return new JSValue.fromValueRef(cReturnValue.reference, context);
   }
 
   ///
@@ -161,35 +143,20 @@ class JSObject extends JSValue {
   ///                   automatically.
   /// @param attributes And OR'd list of JSProperty constants
   ///
-  void property(final String prop, final Object value, final int attributes) {
-  JNIReturnClass runnable = new JNIReturnClass() {
-  @Override
-  public void run() {
-  JSString name = new JSString(prop);
-  jni = setProperty(
-  context.ctxRef(),
-  valueRef,
-  name.stringRef,
-  (value instanceof JSValue) ? ((JSValue) value).valueRef() : new JSValue(context, value).valueRef(),
-  attributes);
-  }
-  };
-  context.sync(runnable);
-  if (runnable.jni.exception != 0) {
-  context.throwJSException(new JSException(new JSValue(runnable.jni.exception, context)));
-  }
+  void setProperty(final String prop, final Object value,
+      [final int attributes = JSPropertyAttributeNone ]) {
+    JSString name = new JSString(prop);
+    final CReturnValue cReturnValue = _setProperty(
+        context.ctxRef(), valueRef, name.stringRef,
+        (value is JSValue) ? value.valueRef : JSValue(context, value)
+            .valueRef,
+        attributes);
+    if (cReturnValue.exception != 0) {
+      context.throwJSException(JSException.fromJSValue(
+          JSValue.fromValueRef(cReturnValue.exception, context)));
+    }
   }
 
-  ///
-  /// Sets the value of property 'prop'.  No JSProperty attributes are set.
-  ///
-  /// @param prop  The name of the property to set
-  /// @param value The Java object to set.  The Java object will be converted to a JavaScript object
-  ///              automatically.
-  ///
-  void property(String prop, Object value) {
-  property(prop, value, JSPropertyAttributeNone);
-  }
 
   ///
   /// Deletes a property from the object
@@ -197,20 +164,16 @@ class JSObject extends JSValue {
   /// @param prop The name of the property to delete
   /// @return true if the property was deleted, false otherwise
   ///
-  boolean deleteProperty(final String prop) {
-  JNIReturnClass runnable = new JNIReturnClass() {
-  @Override
-  public void run() {
-  JSString name = new JSString(prop);
-  jni = deleteProperty(context.ctxRef(), valueRef, name.stringRef());
-  }
-  };
-  context.sync(runnable);
-  if (runnable.jni.exception != 0) {
-  context.throwJSException(new JSException(new JSValue(runnable.jni.exception, context)));
-  return false;
-  }
-  return runnable.jni.bool;
+  bool deleteProperty(final String prop) {
+    JSString name = JSString(prop);
+    final CReturnValue cReturnValue = _deleteProperty(
+        context.ctxRef(), valueRef, name.stringRef);
+    if (cReturnValue.exception != 0) {
+      context.throwJSException(JSException.fromJSValue(
+          JSValue.fromValueRef(cReturnValue.exception, context)));
+      return false;
+    }
+    return cReturnValue.boolean;
   }
 
   ///
@@ -219,19 +182,15 @@ class JSObject extends JSValue {
   /// @param index The index of the property
   /// @return The JSValue of the property at index 'index'
   ///
-  JSValue propertyAtIndex(final int index) {
-  JNIReturnClass runnable = new JNIReturnClass() {
-  @Override
-  public void run() {
-  jni = getPropertyAtIndex(context.ctxRef(), valueRef, index);
-  }
-  };
-  context.sync(runnable);
-  if (runnable.jni.exception != 0) {
-  context.throwJSException(new JSException(new JSValue(runnable.jni.exception, context)));
-  return new JSValue(context);
-  }
-  return new JSValue(runnable.jni.reference, context);
+  JSValue setPropertyAtIndex(final int index) {
+    final CReturnValue cReturnValue = _getPropertyAtIndex(
+        context.ctxRef(), valueRef, index);
+    if (cReturnValue.exception != 0) {
+      context.throwJSException(JSException.fromJSValue(
+          JSValue.fromValueRef(cReturnValue.exception, context)));
+      return JSValue(context);
+    }
+    return JSValue.fromValueRef(cReturnValue.reference, context);
   }
 
   ///
@@ -240,63 +199,52 @@ class JSObject extends JSValue {
   /// @param index The index of the property to set
   /// @param value The Java object to set, will be automatically converted to a JavaScript value
   ///
-  void propertyAtIndex(final int index, final Object value) {
-  JNIReturnClass runnable = new JNIReturnClass() {
-  @Override
-  public void run() {
-  jni = setPropertyAtIndex(context.ctxRef(), valueRef, index,
-  (value instanceof JSValue) ? ((JSValue) value).valueRef() : new JSValue(context, value).valueRef());
-  }
-  };
-  context.sync(runnable);
-  if (runnable.jni.exception != 0) {
-  context.throwJSException(new JSException(new JSValue(runnable.jni.exception, context)));
-  }
+  void getPropertyAtIndex(final int index, final Object value) {
+    final CReturnValue cReturnValue = _setPropertyAtIndex(
+        context.ctxRef(), valueRef, index,
+        (value is JSValue) ? value.valueRef : JSValue(context, value)
+            .valueRef);
+    if (cReturnValue.exception != 0) {
+      context.throwJSException(JSException.fromJSValue(
+          JSValue.fromValueRef(cReturnValue.exception, context)));
+    }
   }
 
-  private abstract class StringArrayReturnClass implements Runnable {
-  String[] sArray;
-  }
+//  private abstract class StringArrayReturnClass implements Runnable {
+//  String[] sArray;
+//  }
 
-  ///
-  /// Gets the list of set property names on the object
-  ///
-  /// @return A string array containing the property names
-  ///
-  String[] propertyNames() {
-  StringArrayReturnClass runnable = new StringArrayReturnClass() {
-  @Override
-  public void run() {
-  int propertyNameArray = copyPropertyNames(context.ctxRef(), valueRef);
-  long[] refs = getPropertyNames(propertyNameArray);
-  String[] names = new String[refs.length];
-  for (int i = 0; i < refs.length; i++) {
-  JSString name = new JSString(refs[i]);
-  names[i] = name.toString();
-  }
-  releasePropertyNames(propertyNameArray);
-  sArray = names;
-  }
-  };
-  context.sync(runnable);
-  return runnable.sArray;
-  }
+//  ///
+//  /// Gets the list of set property names on the object
+//  ///
+//  /// @return A string array containing the property names
+//  ///
+//  String[] propertyNames() {
+//  StringArrayReturnClass runnable = StringArrayReturnClass() {
+//  @Override
+//  public void run() {
+//  int propertyNameArray = copyPropertyNames(context.ctxRef(), valueRef);
+//  long[] refs = getPropertyNames(propertyNameArray);
+//  String[] names = String[refs.length];
+//  for (int i = 0; i < refs.length; i++) {
+//  JSString name = JSString(refs[i]);
+//  names[i] = name.toString();
+//  }
+//  releasePropertyNames(propertyNameArray);
+//  sArray = names;
+//  }
+//  };
+//  context.sync(runnable);
+//  return runnable.sArray;
+//  }
 
   ///
   /// Determines if the object is a function
   ///
   /// @return true if the object is a function, false otherwise
   ///
-  boolean isFunction() {
-  JNIReturnClass runnable = new JNIReturnClass() {
-  @Override
-  public void run() {
-  jni = new JNIReturnObject();
-  jni.bool = isFunction(context.ctxRef(), valueRef);
-  }
-  };
-  context.sync(runnable);
-  return runnable.jni.bool;
+  bool isFunction() {
+    return _isFunction(context.ctxRef(), valueRef);
   }
 
   ///
@@ -304,101 +252,101 @@ class JSObject extends JSValue {
   ///
   /// @return true if the object is a constructor, false otherwise
   ///
-  boolean isConstructor() {
-  JNIReturnClass runnable = new JNIReturnClass() {
-  @Override
-  public void run() {
-  jni = new JNIReturnObject();
-  jni.bool = isConstructor(context.ctxRef(), valueRef);
-  }
-  };
-  context.sync(runnable);
-  return runnable.jni.bool;
+  bool isConstructor() {
+    return _isConstructor(context.ctxRef(), valueRef);
   }
 
-  @Override
-  int hashCode() {
-  return valueRef().intValue();
+  @override
+  int get hashCode {
+    return valueRef;
   }
 
-  final List<JSObject> zombies = new ArrayList<>();
+//  final List<JSObject> zombies = [];
 
-  @Override
-  void finalize() throws Throwable {
-  super.finalize();
-  context.finalizeObject(this);
-  }
+//  @Override
+//  void finalize() throws Throwable {
+//  super.finalize();
+//  context.finalizeObject(this);
+//  }
 
   void setThis(JSObject thiz) {
-  this._thiz = thiz;
+    this._thiz = thiz;
   }
 
   JSObject getThis() {
-  return _thiz;
+    return _thiz;
   }
 
-  @SuppressWarnings("unused")
   JSValue __nullFunc() {
-  return new JSValue(context);
+    return JSValue(context);
   }
 
-  protected JSFunction isInstanceOf = null;
+//  protected JSFunction isInstanceOf = null;
   JSObject _thiz = null;
 
   /* Native Methods */
 
-  int make(int ctx, int data) native 'JSObject_';
+  int make(int ctx, int data) native 'JSObject_make';
 
-  @SuppressWarnings("unused")
-  int makeInstance(int ctx) native 'JSObject_';
+  int makeInstance(int ctx) native 'JSObject_makeInstance';
 
-  CReturnValue makeArray(int ctx, List<int> args) native 'JSObject_';
+  CReturnValue makeArray(int ctx, List<int> args) native 'JSObject_makeArray';
 
-  CReturnValue makeDate(int ctx,List<int> args) native 'JSObject_';
+  CReturnValue makeDate(int ctx, List<int> args) native 'JSObject_makeDate';
 
-  CReturnValue makeError(int ctx,List<int> args) native 'JSObject_';
+  CReturnValue makeError(int ctx, List<int> args) native 'JSObject_makeError';
 
-  CReturnValue makeRegExp(int ctx, List<int> args) native 'JSObject_';
+  CReturnValue makeRegExp(int ctx, List<int> args) native 'JSObject_makeRegExp';
 
-  int getPrototype(int ctx, int object) native 'JSObject_';
+  int getPrototype(int ctx, int object) native 'JSObject_getPrototype';
 
-  void setPrototype(int ctx, int object, int value) native 'JSObject_';
+  void setPrototype(int ctx, int object,
+      int value) native 'JSObject_setPrototype';
 
-  boolean hasProperty(int ctx, int object, int propertyName) native 'JSObject_';
+  bool _hasProperty(int ctx, int object,
+      int propertyName) native 'JSObject_hasProperty';
 
-  CReturnValue getProperty(int ctx, int object, int propertyName) native 'JSObject_';
+  CReturnValue _getProperty(int ctx, int object,
+      int propertyName) native 'JSObject_getProperty';
 
-  CReturnValue setProperty(int ctx, int object, int propertyName, int value, int attributes) native 'JSObject_';
+  CReturnValue _setProperty(int ctx, int object, int propertyName, int value,
+      int attributes) native 'JSObject_setProperty';
 
-  CReturnValue deleteProperty(int ctx, int object, int propertyName) native 'JSObject_';
+  CReturnValue _deleteProperty(int ctx, int object,
+      int propertyName) native 'JSObject_deleteProperty';
 
-  CReturnValue getPropertyAtIndex(int ctx, int object, int propertyIndex) native 'JSObject_';
+  CReturnValue _getPropertyAtIndex(int ctx, int object,
+      int propertyIndex) native 'JSObject_getPropertyAtIndex';
 
-  CReturnValue setPropertyAtIndex(int ctx, int object, int propertyIndex, int value) native 'JSObject_';
+  CReturnValue _setPropertyAtIndex(int ctx, int object, int propertyIndex,
+      int value) native 'JSObject_setPropertyAtIndex';
 
-  @SuppressWarnings("unused")
-  int getPrivate(int object) native 'JSObject_';
+  int getPrivate(int object) native 'JSObject_getPrivate';
 
-  @SuppressWarnings("unused")
-  boolean setPrivate(int object, int data) native 'JSObject_';
+  bool setPrivate(int object, int data) native 'JSObject_setPrivate';
 
-  boolean isFunction(int ctx, int object) native 'JSObject_';
+  bool _isFunction(int ctx, int object) native 'JSObject_isFunction';
 
-  CReturnValue callAsFunction(int ctx, int object, int thisObject, long[] args native 'JSObject_';
+  CReturnValue callAsFunction(int ctx, int object,int thisObject, List<int> args) native 'JSObject_callAsFunction';
 
-  boolean isConstructor(int ctx, int object) native 'JSObject_';
+  bool _isConstructor(int ctx, int object) native 'JSObject_isConstructor';
 
-  CReturnValue callAsConstructor(int ctx, int object, long[] args) native 'JSObject_';
+  CReturnValue callAsConstructor(int ctx, int object,List<int> args) native 'JSObject_callAsConstructor';
 
-  int copyPropertyNames(int ctx, int object) native 'JSObject_';
+  int copyPropertyNames(int ctx,
+      int object) native 'JSObject_copyPropertyNames';
 
-  List<int> getPropertyNames(int propertyNameArray) native 'JSObject_';
+  List<int> getPropertyNames(
+      int propertyNameArray) native 'JSObject_getPropertyNames';
 
-  void releasePropertyNames(int propertyNameArray) native 'JSObject_';
+  void releasePropertyNames(
+      int propertyNameArray) native 'JSObject_releasePropertyNames';
 
-  int makeFunctionWithCallback(int ctx, int name) native 'JSObject_';
+  int makeFunctionWithCallback(int ctx,
+      int name) native 'JSObject_makeFunctionWithCallback';
 
   CReturnValue makeFunction(int ctx, int name, List<int> parameterNames,
-  int body, int sourceURL, int startingLineNumber) native 'JSObject_';
+      int body, int sourceURL,
+      int startingLineNumber) native 'JSObject_makeFunction';
 
 }

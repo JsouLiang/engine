@@ -4,13 +4,20 @@
 
 source_set("jsc") {
   sources = [
+    "dart_jsc.cc",
+    "dart_jsc.h",
     "shell/JSValue.h",
     "shell/JSValue.cc",
+    "shell/JSContext.h",
+    "shell/JSContext.cc",
+    "shell/JSString.cc",
+    "shell/jsc_utils.cc",
   ]
 
   public_configs = [ "$flutter_root:config" ]
 
   deps = [
+    "$flutter_root/lib/ui",
     "$flutter_root/assets",
     "$flutter_root/common",
     "$flutter_root/flow",

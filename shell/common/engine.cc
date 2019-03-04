@@ -251,7 +251,7 @@ void Engine::SetViewportMetrics(const blink::ViewportMetrics& metrics) {
 
 void Engine::DispatchPlatformMessage(
     fml::RefPtr<blink::PlatformMessage> message) {
-    FML_LOG(ERROR) << " ==== Engine::DispatchPlatformMessage ==== " << message->channel();
+  FML_LOG(ERROR) << " ==== Engine::DispatchPlatformMessage ==== " << message->channel();
 
   if (message->channel() == kLifecycleChannel) {
     if (HandleLifecyclePlatformMessage(message.get()))

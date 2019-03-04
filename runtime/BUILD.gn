@@ -56,6 +56,7 @@ source_set("runtime") {
     "$flutter_root/fml",
     "$flutter_root/lib/io",
     "$flutter_root/lib/ui",
+    "$flutter_root/lib/jsc",
     "$flutter_root/third_party/txt",
     "//third_party/dart/runtime:dart_api",
     "//third_party/dart/runtime/bin:dart_io_api",

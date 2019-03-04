@@ -1,57 +1,7 @@
 part of dart.jsc;
 
+
 class JSValue {
-//
-//  protected static class JSWorkerQueue {
-//  public JSWorkerQueue(final Runnable monitor) {
-//  mMonitor = monitor;
-//  }
-//  final Runnable mMonitor;
-//
-//  private class JSTask extends AsyncTask<Runnable, Void, JSException> {
-//  @Override
-//  public JSException doInBackground(Runnable ... params) {
-//  try {
-//  params[0].run();
-//  mMonitor.run();
-//  } catch (JSException e) {
-//  return e;
-//  }
-//  return null;
-//  }
-//  }
-//
-//  public void sync(final Runnable runnable) {
-//  if (Looper.myLooper() == Looper.getMainLooper()) {
-//  try {
-//  JSException e = new JSTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, runnable).get();
-//  if (e != null) throw e;
-//  } catch (ExecutionException e) {
-//  Log.e("JSWorkerQueue", e.getMessage());
-//  } catch (InterruptedException e) {
-//  Thread.interrupted();
-//  }
-//  } else {
-//  runnable.run();
-//  mMonitor.run();
-//  }
-//  }
-//
-//  public void async(final Runnable runnable) {
-//  if (Looper.myLooper() == Looper.getMainLooper()) {
-//  new JSTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, runnable);
-//  } else {
-//  runnable.run();
-//  mMonitor.run();
-//  }
-//  }
-//
-//  public void quit() {
-//
-//  }
-//  }
-//
-//  
   int valueRef = 0;
   JSContext context;
   bool isDefunct = false;
@@ -62,8 +12,7 @@ class JSValue {
   ///   * generate an undefined JavaScript value.
   ///   * @param ctx  The context in which to create the value
   ///   * @param val  The Java value
-
-  JSValue([this.context,final Object val]) {
+  JSValue([this.context, final Object val]) {
     if (context == null) {
       ///
       /// Called only by convenience subclasses.  If you use
@@ -71,78 +20,63 @@ class JSValue {
       ///
       return;
     }
-// context.sync(new Runnable() {
-// @Override
-// public void run() {
-  if (val == null) {
-  valueRef = makeNull(context.ctxRef());
-  } else if (val is JSValue) {
-  valueRef = val.valueRef;
-  protect(context.ctxRef(), valueRef);
-  } else if (val is Map) {
-    //todo map
+    if (val == null) {
+      valueRef = makeNull(context.ctxRef());
+    } else if (val is JSValue) {
+      valueRef = val.valueRef;
+      protect(context.ctxRef(), valueRef);
+    } else if (val is Map) {
+      //todo map
 //    valueRef = new JSObjectPropertiesMap(context, (Map)val, Object.class).getJSObject().valueRef();
 //  protect(context.ctxRef(), valueRef);
-  } else if (val is List) {
+    } else if (val is List) {
       //todo list
 //  valueRef = new JSArray<>(context, (List) val, JSValue.class).valueRef();
 //  protect(context.ctxRef(), valueRef);
 //  } else if (val.getClass().isArray()) {
 //  valueRef = new JSArray<>(context, (Object[])val, JSValue.class).valueRef();
 //  protect(context.ctxRef(), valueRef);
-  } else if (val is bool) {
-  valueRef = makeBoolean(context.ctxRef(), val);
-  } else if (val is double) {
-  valueRef = makeNumber(context.ctxRef(), val);
-  } else if (val is int ) {
-  valueRef = makeNumber(context.ctxRef(), val.toDouble());
-  } else if (val is String) {
-  JSString s = new JSString((String)val);
-  valueRef = makeString(context.ctxRef(), s.stringRef);
-  } else {
-  valueRef = makeUndefined(context.ctxRef());
-  }
-// }
-// });
+    } else if (val is bool) {
+      valueRef = makeBoolean(context.ctxRef(), val);
+    } else if (val is double) {
+      valueRef = makeNumber(context.ctxRef(), val);
+    } else if (val is int) {
+      valueRef = makeNumber(context.ctxRef(), val.toDouble());
+    } else if (val is String) {
+      JSString s = new JSString(val);
+      valueRef = makeString(context.ctxRef(), s.stringRef);
+    } else {
+      valueRef = makeUndefined(context.ctxRef());
+    }
   }
 
   /// Wraps an existing JavaScript value
   /// @param valueRef  The JavaScriptCore reference to the value
   /// @param ctx  The context in which the value exists
   /// @since 1.0
-  JSValue.fromValueRef(final int valueRef, JSContext ctx) {
-    context = ctx;
+  JSValue.fromValueRef(final int valueRef, this.context) {
     if (valueRef == 0) {
       this.valueRef = makeUndefined(context.ctxRef());
-    }
-    else {
+    } else {
       this.valueRef = valueRef;
       protect(context.ctxRef(), valueRef);
     }
   }
 
   ///todo dart 没有finalize这个机制
-//  @Override
-//  protected void finalize() throws Throwable {
-//  super.finalize();
-//  unprotect();
-//  }
-//
+  ///
+  void dispose() {
+//    super.dispose();
+    _unprotect();
+  }
+
   /* Testers */
+
   /// Tests whether the value is undefined
   /// @return  true if undefined, false otherwise
   /// @since 1.0
   bool isUndefined() {
     return _isUndefined(context.ctxRef(), valueRef);
-//  CReturnValue runnable = new JNIReturnClass() {
-//  @Override
-//  public void run() {
-//  jni = new JNIReturnObject();
-//  jni.bool = isUndefined(context.ctxRef(), valueRef);
-//  }
-//  };
-//  context.sync(runnable);
-//  return runnable.jni.bool;
   }
 
   ///
@@ -152,42 +86,36 @@ class JSValue {
   ///
   bool isNull() {
     return _isNull(context.ctxRef(), valueRef);
-//  JNIReturnClass runnable = new JNIReturnClass() {
-//  @Override
-//  public void run() {
-//  jni = new JNIReturnObject();
-//  jni.bool = isNull(context.ctxRef(), valueRef);
-//  }
-//  };
-//  context.sync(runnable);
-//  return runnable.jni.bool;
   }
 
   /// Tests whether the value is boolean
   /// @return  true if boolean, false otherwise
-  /// 
-   bool isBoolean() {
-     return _isBoolean(context.ctxRef(), valueRef);
+  ///
+  bool isBoolean() {
+    return _isBoolean(context.ctxRef(), valueRef);
   }
 
- ///
- /// Tests whether the value is a number
- /// @return  true if a number, false otherwise
- ///
- bool isNumber() {
- return _isNumber(context.ctxRef(), valueRef);
- }
   ///
-   /// Tests whether the value is a string
-   /// @return  true if a string, false otherwise
-   ///
- bool isString() {
- return _isString(context.ctxRef(), valueRef);
- }
+  /// Tests whether the value is a number
+  /// @return  true if a number, false otherwise
+  ///
+  bool isNumber() {
+    return _isNumber(context.ctxRef(), valueRef);
+  }
+
+  ///
+  /// Tests whether the value is a string
+  /// @return  true if a string, false otherwise
+  ///
+  bool isString() {
+    return _isString(context.ctxRef(), valueRef);
+  }
+
+  ///todo —— JSValueIsArray/JSValueIsDate 只有 OSX 10.11+ iOS 9.0+支持 android 目前美团里的jsc里没有
 //   ///
 //   /// Tests whether the value is an array
 //   /// @return  true if an array, false otherwise
-//   /// 
+//   ///
 //  bool isArray() {
 //  return _isArray(context.ctxRef(), valueRef);
 //  }
@@ -200,13 +128,14 @@ class JSValue {
 //  return _isDate(context.ctxRef(), valueRef);
 //  }
 
- ///
- /// Tests whether the value is an object
- /// @return  true if an object, false otherwise
- ///
- bool isObject() {
- return _isObject(context.ctxRef(), valueRef);
- }
+  ///
+  /// Tests whether the value is an object
+  /// @return  true if an object, false otherwise
+  ///
+  bool isObject() {
+    return _isObject(context.ctxRef(), valueRef);
+  }
+
 //  /**
 //   * Tests whether a value in an instance of a constructor object
 //   * @param constructor  The constructor object to test
@@ -228,35 +157,34 @@ class JSValue {
 //  return runnable.jni.bool;
 //  }
 //
- /* Comparators */
-@override
-bool operator ==(other){
- return isEqual(other);
-}
+  /* Comparators */
+  @override
+  bool operator ==(dynamic other) {
+    return isEqual(other);
+  }
 
- /**
-  * JavaScript definition of equality (==).  JSValue.equals() and JSValue.isEqual() represent
-  * the Java and JavaScript definitions, respectively.  Normally they will return the same
-  * value, however some classes may override and offer different results.  Example,
-  * in JavaScript, new Float32Array([1,2,3]) == new Float32Array([1,2,3]) will be false (as
-  * the equality is only true if they are the same physical object), but from a Java util.java.List
-  * perspective, these two are equal.
-  * @param other the value to compare for equality
-  * @return true if == from JavaScript perspective, false otherwise
-  * @since 3.0
-  */
- bool isEqual(Object other) {
- if (other == this) return true;
- JSValue otherJSValue;
- if (other is JSValue) {
- otherJSValue = other;
- } else {
- otherJSValue = new JSValue(context, other);
- }
- final JSValue ojsv = otherJSValue;
- CReturnValue crv= _isEqual(context.ctxRef(), valueRef, ojsv.valueRef);
- return crv.exception==0 && crv.boolean;
- }
+  ///
+  /// JavaScript definition of equality (==).  JSValue.equals() and JSValue.isEqual() represent
+  /// the Java and JavaScript definitions, respectively.  Normally they will return the same
+  /// value, however some classes may override and offer different results.  Example,
+  /// in JavaScript, new Float32Array([1,2,3]) == new Float32Array([1,2,3]) will be false (as
+  /// the equality is only true if they are the same physical object), but from a Java util.java.List
+  /// perspective, these two are equal.
+  /// @param other the value to compare for equality
+  /// @return true if == from JavaScript perspective, false otherwise
+  ///
+  bool isEqual(Object other) {
+    if (other == this) return true;
+    JSValue otherJSValue;
+    if (other is JSValue) {
+      otherJSValue = other;
+    } else {
+      otherJSValue = new JSValue(context, other);
+    }
+    final JSValue ojsv = otherJSValue;
+    CReturnValue crv = _isEqual(context.ctxRef(), valueRef, ojsv.valueRef);
+    return crv.exception == 0 && crv.boolean;
+  }
 
 //  /**
 //   * Tests whether two values are strict equal.  In JavaScript, equivalent to '===' operator.
@@ -284,88 +212,53 @@ bool operator ==(other){
 //  return runnable.jni.bool;
 //  }
 //
-//  /* Getters */
-//  /**
-//   * Gets the Boolean value of this JS value
-//   * @return  the Boolean value
-//   * @since 1.0
-//   */
-//  public Boolean toBoolean() {
-//  JNIReturnClass runnable = new JNIReturnClass() {
-//  @Override
-//  public void run() {
-//  jni = new JNIReturnObject();
-//  jni.bool = toBoolean(context.ctxRef(), valueRef);
-//  }
-//  };
-//  context.sync(runnable);
-//  return runnable.jni.bool;
-//  }
-//  /**
-//   * Gets the numeric value of this JS value
-//   * @return  The numeric value
-//   * @since 1.0
-//   */
-//  public Double toNumber() {
-//  JNIReturnClass runnable = new JNIReturnClass() {
-//  @Override
-//  public void run() {
-//  jni = toNumber(context.ctxRef(), valueRef);
-//  }
-//  };
-//  context.sync(runnable);
-//  if (runnable.jni.exception!=0) {
-//  context.throwJSException(new JSException(new JSValue(runnable.jni.exception, context)));
-//  return 0.0;
-//  }
-//  return runnable.jni.number;
-//  }
-//  @Override
-//  public String toString() {
-//  try {
-//  return toJSString().toString();
-//  } catch (JSException e) {
-//  return e.toString();
-//  }
-//  }
-//  /**
-//   * Gets the JSString value of this JS value
-//   * @return  The JSString value
-//   * @since 1.0
-//   */
-//  protected JSString toJSString() {
-//  JNIReturnClass runnable = new JNIReturnClass() {
-//  @Override
-//  public void run() {
-//  jni = toStringCopy(context.ctxRef(), valueRef);
-//  }
-//  };
-//  context.sync(runnable);
-//  if (runnable.jni.exception!=0) {
-//  context.throwJSException(new JSException(new JSValue(runnable.jni.exception, context)));
-//  return null;
-//  }
-//  return new JSString(runnable.jni.reference);
-//  }
-//  /**
-//   * If the JS value is an object, gets the JSObject
-//   * @return  The JSObject for this value
-//   * @since 1.0
-//   */
-//  public JSObject toObject() {
-//  JNIReturnClass runnable = new JNIReturnClass() {
-//  @Override
-//  public void run() {
-//  jni = toObject(context.ctxRef(), valueRef);
-//  }
-//  };
-//  context.sync(runnable);
-//  if (runnable.jni.exception!=0) {
-//  context.throwJSException(new JSException(new JSValue(runnable.jni.exception, context)));
-//  return new JSObject(context);
-//  }
-//  return context.getObjectFromRef(runnable.jni.reference);
-//  }
+  /* Getters */
+  /// Gets the Boolean value of this JS value
+  /// @return  the Boolean value
+  bool toBoolean() {
+    return _toBoolean(context.ctxRef(), valueRef);
+  }
+
+  /// Gets the numeric value of this JS value
+  /// @return  The numeric value
+  /// @since 1.0
+  double toNumber() {
+  CReturnValue cReturnValue = _toNumber(context.ctxRef(), valueRef);
+  if (cReturnValue.exception!=0) {
+  context.throwJSException(JSException.fromJSValue(JSValue.fromValueRef(cReturnValue.exception, context)));
+  return 0.0;
+  }
+  return cReturnValue.number;
+  }
+
+  @override
+  String toString() {
+  try {
+  return toJSString().toString();
+  }  on JSException catch (e)  {
+    return e.toString();
+  }
+  }
+  /// Gets the JSString value of this JS value
+  /// @return  The JSString value
+  JSString toJSString() {
+  CReturnValue cReturnValue = _toStringCopy(context.ctxRef(), valueRef);
+  if (cReturnValue.exception!=0) {
+  context.throwJSException(JSException.fromJSValue(JSValue.fromValueRef(cReturnValue.exception, context)));
+  return null;
+  }
+  return  JSString(cReturnValue.reference);
+  }
+  /// If the JS value is an object, gets the JSObject
+  /// @return  The JSObject for this value
+  JSObject toObject() {
+    CReturnValue cReturnValue = _toObject(context.ctxRef(), valueRef);
+  if (cReturnValue.exception!=0) {
+  context.throwJSException( JSException.fromJSValue(JSValue.fromValueRef(cReturnValue.exception, context)));
+  return  JSObject(context);
+  }
+  return context.getObjectFromRef(cReturnValue.reference);
+  }
 //
 //  /**
 //   * If the JS value is a function, gets the JSFunction
@@ -379,7 +272,7 @@ bool operator ==(other){
 //  toObject();
 //  return null;
 //  } else {
-//  context.throwJSException(new JSException(context, "JSObject not a function"));
+//  context.throwJSException( JSException(context, "JSObject not a function"));
 //  return null;
 //  }
 //  }
@@ -396,7 +289,7 @@ bool operator ==(other){
 //  toObject();
 //  return null;
 //  } else {
-//  context.throwJSException(new JSException(context, "JSObject not an array"));
+//  context.throwJSException( JSException(context, "JSObject not an array"));
 //  return null;
 //  }
 //  }
@@ -408,21 +301,21 @@ bool operator ==(other){
 //   * @since 1.0
 //   */
 //  public String toJSON(final int indent) {
-//  JNIReturnClass runnable = new JNIReturnClass() {
+//  JNIReturnClass runnable =  JNIReturnClass() {
 //  @Override
 //  public void run() {
 //  jni = createJSONString(context.ctxRef(), valueRef, indent);
 //  }
 //  };
 //  context.sync(runnable);
-//  if (runnable.jni.exception!=0) {
-//  context.throwJSException(new JSException(new JSValue(runnable.jni.exception, context)));
+//  if (cReturnValueexception!=0) {
+//  context.throwJSException( JSException( JSValue(cReturnValueexception, context)));
 //  return null;
 //  }
-//  if (runnable.jni.reference==0) {
+//  if (cReturnValuereference==0) {
 //  return null;
 //  }
-//  return new JSString(runnable.jni.reference).toString();
+//  return  JSString(cReturnValuereference).toString();
 //  }
 //  /**
 //   * Gets the JSON of this JS value
@@ -438,7 +331,7 @@ bool operator ==(other){
 //  if (clazz == Object.class)
 //  return this;
 //  else if (clazz == Map.class)
-//  return new JSObjectPropertiesMap(toObject(),Object.class);
+//  return  JSObjectPropertiesMap(toObject(),Object.class);
 //  else if (clazz == List.class)
 //  return toJSArray();
 //  else if (clazz == String.class)
@@ -466,14 +359,14 @@ bool operator ==(other){
 //  return null;
 //  }
 
-//  @Override
-//  int hashCode() {
-//    if (isBoolean()) return toBoolean().hashCode();
-//    else if (isNumber()) return toNumber().hashCode();
-//    else if (isString()) return toString().hashCode();
-//    else if (isUndefined() || isNull()) return 0;
-//    else return super.hashCode();
-//  }
+  @override
+  int get hashCode {
+    if (isBoolean()) return toBoolean().hashCode;
+    else if (isNumber()) return toNumber().hashCode;
+    else if (isString()) return toString().hashCode;
+    else if (isUndefined() || isNull()) return 0;
+    else return super.hashCode;
+  }
 
   /// Gets the JSContext of this value
   /// @return the JSContext of this value
@@ -482,77 +375,78 @@ bool operator ==(other){
     return context;
   }
 
-  void unprotect() {
+  void _unprotect() {
     if (_isProtected && !context.isDefunct)
-      context.markForUnprotection(valueRef());
+      context.markForUnprotection(valueRef);
     _isProtected = false;
   }
+
+//  void realUnprotect(){}
 
   bool _isProtected = true;
 
   /* Native functions */
-  int _getType(int ctxRef, int valueRef) native 'JSValue_getType';
+  static int _getType(int ctxRef, int valueRef) native 'JSValue_getType';
 
-  bool _isUndefined(int ctxRef, int valueRef) native 'JSValue_isUndefined';
+  static bool _isUndefined(int ctxRef, int valueRef) native 'JSValue_isUndefined';
 
-  bool _isNull(int ctxRef, int valueRef) native 'JSValue_isNull';
+  static bool _isNull(int ctxRef, int valueRef) native 'JSValue_isNull';
 
-  bool _isBoolean(int ctxRef, int valueRef) native 'JSValue_isBoolean';
+  static bool _isBoolean(int ctxRef, int valueRef) native 'JSValue_isBoolean';
 
-  bool _isNumber(int ctxRef, int valueRef) native 'JSValue_isNumber';
+  static bool _isNumber(int ctxRef, int valueRef) native 'JSValue_isNumber';
 
-  bool _isString(int ctxRef, int valueRef) native 'JSValue_isString';
+  static bool _isString(int ctxRef, int valueRef) native 'JSValue_isString';
 
-  bool _isObject(int ctxRef, int valueRef) native 'JSValue_isObject';
+  static bool _isObject(int ctxRef, int valueRef) native 'JSValue_isObject';
 
-  // bool _isArray(int ctxRef, int valueRef) native 'JSValue_isArray';
+  //static  bool _isArray(int ctxRef, int valueRef) native 'JSValue_isArray';
 
-  // bool _isDate(int ctxRef, int valueRef) native 'JSValue_isDate';
+  //static  bool _isDate(int ctxRef, int valueRef) native 'JSValue_isDate';
 
-  CReturnValue _isEqual(int ctxRef, int a, int b) native 'JSValue_isEqual';
+  static CReturnValue _isEqual(int ctxRef, int a, int b) native 'JSValue_isEqual';
 
-  bool _isStrictEqual(int ctxRef, int a, int b) native 'JSValue_isStrictEqual';
+  static bool _isStrictEqual(int ctxRef, int a, int b) native 'JSValue_isStrictEqual';
 
-  CReturnValue _isInstanceOfConstructor(int ctxRef, int valueRef,
+  static CReturnValue _isInstanceOfConstructor(int ctxRef, int valueRef,
       int constructor) native 'JSValue_isInstanceOfConstructor';
 
-  int makeUndefined(int ctx) native 'JSValue_makeUndefined';
+  static int makeUndefined(int ctx) native 'JSValue_makeUndefined';
 
-  int makeNull(int ctx) native 'JSValue_makeNull';
+  static int makeNull(int ctx) native 'JSValue_makeNull';
 
-  int makeBoolean(int ctx, bool bool) native 'JSValue_makeBoolean';
+  static int makeBoolean(int ctx, bool bool) native 'JSValue_makeBoolean';
 
-  int makeNumber(int ctx, double number) native 'JSValue_makeNumber';
+  static int makeNumber(int ctx, double number) native 'JSValue_makeNumber';
 
-  int makeString(int ctx, int stringRef) native 'JSValue_makeString';
+  static int makeString(int ctx, int stringRef) native 'JSValue_makeString';
 
-  int makeFromJSONString(int ctx,
-      int stringRef) native 'JSValue_makeFromJSONString';
+  static int makeFromJSONString(int ctx, int stringRef)
+      native 'JSValue_makeFromJSONString';
 
-  CReturnValue createJSONString(int ctxRef, int valueRef,
-      int indent) native 'JSValue_createJSONString';
+  static CReturnValue createJSONString(int ctxRef, int valueRef, int indent)
+      native 'JSValue_createJSONString';
 
-  bool _toBoolean(int ctx, int valueRef) native 'JSValue_toBoolean';
+  static bool _toBoolean(int ctx, int valueRef) native 'JSValue_toBoolean';
 
-  CReturnValue _toNumber(int ctxRef, int valueRef) native 'JSValue_toNumber';
+  static CReturnValue _toNumber(int ctxRef, int valueRef) native 'JSValue_toNumber';
 
-  CReturnValue _toStringCopy(int ctxRef,
-      int valueRef) native 'JSValue_toStringCopy';
+  static CReturnValue _toStringCopy(int ctxRef, int valueRef)
+      native 'JSValue_toStringCopy';
 
-  CReturnValue _toObject(int ctxRef, int valueRef) native 'JSValue_toObject';
+  static CReturnValue _toObject(int ctxRef, int valueRef) native 'JSValue_toObject';
 
-  void protect(int ctx, int valueRef) native 'JSValue_protect';
+  static void protect(int ctx, int valueRef) native 'JSValue_protect';
 
-  void _unprotect(int ctx, int valueRef) native 'JSValue_unprotect';
+  static void unprotect(int ctx, int valueRef) native 'JSValue_unprotect';
 
-  void _setException(int valueRef,
-      int exceptionRefRef) native 'JSValue_setException';
+  static void _setException(int valueRef, int exceptionRefRef)
+      native 'JSValue_setException';
 }
 
 /// Used in communicating with JavaScriptCore JNI.
 /// Clients do not need to use this.
-class CReturnValue {
-
+class CReturnValue extends NativeFieldWrapperClass4  {
   /// The boolean return value
   bool boolean;
 
@@ -566,44 +460,29 @@ class CReturnValue {
   int exception;
 }
 
+CReturnValue getCReturnValue(){
+  
+
+}
 class JSString {
+  int stringRef;
 
-// static final JSWorkerQueue workerQueue = new JSWorkerQueue(new Runnable() {
-//  @Override
-//  public void run() {
-//  }
-//  });
+  ///
+  /// Creates a JavaScript string from a Java string
+  /// OR  Wraps an existing JavaScript string
+  /// @param s  The Java string with which to initialize the JavaScript string
+  /// @param stringRef  The JavaScriptCore reference to the string
+  ///
+  JSString(final dynamic s) {
+    if (s == null) {
+      stringRef = 0;
+    } else if (s is int) {
+      stringRef = s;
+    } else {
+      stringRef = createWithCharacters(s);
+    }
+  }
 
-//  private abstract class JNIStringReturnClass implements Runnable {
-//  String string;
-//  }
-
-@protected
-int stringRef;
-
- /**
-  * Creates a JavaScript string from a Java string
-  * @param s  The Java string with which to initialize the JavaScript string
-  * @since 1.0
-  */
- public JSString(final String s) {
- if (s==null) stringRef = 0L;
- else {
- workerQueue.sync(new Runnable() {
- @Override
- public void run() {
- stringRef = createWithCharacters(s);
- }
- });
- }
- }
-//  /**
-//   * Wraps an existing JavaScript string
-//   * @param stringRef  The JavaScriptCore reference to the string
-//   */
-//  public JSString(int stringRef) {
-//  this.stringRef = stringRef;
-//  }
 //  @Override
 //  protected void finalize() throws Throwable {
 //  super.finalize();
@@ -611,43 +490,29 @@ int stringRef;
 //  release(stringRef);
 //  }
 
- @Override
- public String toString() {
- JNIStringReturnClass payload = new JNIStringReturnClass() {
- @Override
- public void run() {
- string = JSString.this.toString(stringRef);
- }
- };
- workerQueue.sync(payload);
- return payload.string;
- }
+  @override
+  String toString() {
+    return _toString(stringRef);
+  }
 
- /**
-  * Gets the JavaScriptCore string reference
-  * @return  the JavaScriptCore string reference
-  * @since 1.0
-  */
- public int stringRef() {
- return stringRef;
- }
+  //native function 
+  static int createWithCharacters(String str) native 'JSString_createWithCharacters';
 
- protected native int createWithCharacters(String str);
- protected native int retain(int strRef);
- protected native void release(int stringRef);
- protected native boolean isEqual(int a, int b);
- protected native String toString(int strRef);
+  static int retain(int strRef) native 'JSString_retain';
 
- @SuppressWarnings("unused")
- protected native int getLength(int stringRef);
- @SuppressWarnings("unused")
- protected native int createWithUTF8CString(String str);
- @SuppressWarnings("unused")
- protected native int getMaximumUTF8CStringSize(int stringRef);
- @SuppressWarnings("unused")
- protected native boolean isEqualToUTF8CString(int a, String b);
- }
+  static void release(int stringRef) native 'JSString_release';
 
- private abstract class JNIReturnClass implements Runnable {
- JNIReturnObject jni;
- }
+  static bool isEqual(int a, int b) native 'JSString_isEqual';
+
+  static String _toString(int strRef) native 'JSString_toString';
+
+  static int getLength(int stringRef) native 'JSString_getLength';
+
+  static int getMaximumUTF8CStringSize(int stringRef)
+      native 'JSString_getMaximumUTF8CStringSize';
+
+  static int createWithUTF8CString(String str) native 'JSString_createWithUTF8CString';
+
+  static bool isEqualToUTF8CString(int a, String b)
+      native 'JSString_isEqualToUTF8CString';
+}

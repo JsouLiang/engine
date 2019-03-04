@@ -12,6 +12,7 @@
 #include "flutter/lib/io/dart_io.h"
 #include "flutter/lib/ui/dart_runtime_hooks.h"
 #include "flutter/lib/ui/dart_ui.h"
+#include "flutter/lib/jsc/dart_jsc.h"
 #include "flutter/runtime/dart_service_isolate.h"
 #include "flutter/runtime/dart_vm.h"
 #include "third_party/dart/runtime/include/dart_api.h"
@@ -256,6 +257,7 @@ bool DartIsolate::LoadLibraries(bool is_root_isolate) {
   }
 
   phase_ = Phase::LibrariesSetup;
+  DartJSC::InitForIsolate();
   return true;
 }
 

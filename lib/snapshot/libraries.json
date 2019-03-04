@@ -123,6 +123,9 @@
         "patches": "../../../third_party/dart/runtime/lib/convert_patch.dart",
         "uri": "../../../third_party/dart/sdk/lib/convert/convert.dart"
       },
+      "jsc": {
+        "uri": "../../lib/jsc/jsc.dart"
+      },
       "profiler": {
         "uri": "../../../third_party/dart/sdk/lib/profiler/profiler.dart"
       },

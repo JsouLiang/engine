@@ -3,7 +3,7 @@ dart_jsc_files = [
   "$flutter_root/lib/jsc/JSValue.dart",
   "$flutter_root/lib/jsc/JSContext.dart",
   "$flutter_root/lib/jsc/JSObject.dart",
-
+  "$flutter_root/lib/jsc/jsc.dart",
 ]
 
-dart_jsc_path = "$flutter_root/lib/jsc/JSCore.dart"
+dart_jsc_path = "$flutter_root/lib/jsc/jsc.dart"

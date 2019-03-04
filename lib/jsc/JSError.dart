@@ -10,17 +10,18 @@ class JSError extends JSObject {
     /// @param ctx  The context in which to create the error
     /// @param message  The description of the error
     ///
-    JSError(JSContext ctx, {String message}) {
+    JSError(JSContext ctx, [String message]) {
         context = ctx;
         List<int> args;
         if(message != null){
-            args = [JSValue(context,message).valueRef()];
+            args = [JSValue(context,message).valueRef];
         } else{
             args = List<int>(0);
         }
-        CReturnValue jni = makeError(context.ctxRef(), args);
-        if (BuildConfig.DEBUG && jni.exception != 0) throw new AssertionError();
-        valueRef = jni.reference;
+        CReturnValue cReturnValue = makeError(context.ctxRef(), args);
+        //todo debug mode
+//        if (BuildConfig.DEBUG && cReturnValue.exception != 0) throw new AssertionError();
+        valueRef = cReturnValue.reference;
     }
 
     ///
@@ -28,10 +29,7 @@ class JSError extends JSObject {
     /// object.
     /// @param error the JavaScript Error object
     ///
-    JSError.fromJSValue(JSValue error){
-        super(error.valueRef(), error.getContext())
-
-    }
+    JSError.fromJSValue(JSValue error):super.fromValueRef(error.valueRef, error.getContext());
 
 
     /// JavaScript error stack trace, see:
@@ -39,7 +37,7 @@ class JSError extends JSObject {
     /// @return stack trace for error
     /// @since 3.0
     String stack() {
-        return property("stack").toString();
+        return getProperty("stack").toString();
     }
 
     /// JavaScript error message, see:
@@ -47,7 +45,7 @@ class JSError extends JSObject {
     /// @return error message
     /// @since 3.0
     String message() {
-        return property("message").toString();
+        return getProperty("message").toString();
     }
 
     ///
@@ -57,7 +55,7 @@ class JSError extends JSObject {
     /// @since 3.0
     ///
     String name() {
-        return property("name").toString();
+        return getProperty("name").toString();
     }
 
 }

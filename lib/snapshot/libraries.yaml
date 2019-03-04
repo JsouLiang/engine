@@ -135,6 +135,9 @@ flutter:
     ui:
       uri: "../../lib/ui/ui.dart"
 
+    jsc:
+      uri: "../../lib/jsc/jsc.dart"  
+
     _vmservice:
       uri: "../../../third_party/dart/sdk/lib/vmservice/vmservice.dart"
 
