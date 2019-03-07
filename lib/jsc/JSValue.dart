@@ -1,6 +1,6 @@
 part of dart.jsc;
 
-class JSValue {
+abstract class JSValue {
   int valueRef = 0;
   JSContext context;
   bool isDefunct = false;
@@ -36,15 +36,6 @@ class JSValue {
 //  } else if (val.getClass().isArray()) {
 //  valueRef = new JSArray<>(context, (Object[])val, JSValue.class).valueRef();
 //  protect(context.ctxRef(), valueRef);
-    } else if (val is bool) {
-      valueRef = makeBoolean(context.ctxRef(), val);
-    } else if (val is double) {
-      valueRef = makeNumber(context.ctxRef(), val);
-    } else if (val is int) {
-      valueRef = makeNumber(context.ctxRef(), val.toDouble());
-    } else if (val is String) {
-      JSString s = new JSString(val);
-      valueRef = makeString(context.ctxRef(), s.stringRef);
     } else {
       valueRef = makeUndefined(context.ctxRef());
     }
@@ -75,41 +66,46 @@ class JSValue {
   /// Tests whether the value is undefined
   /// @return  true if undefined, false otherwise
   /// @since 1.0
-  bool isUndefined() {
-    return _isUndefined(context.ctxRef(), valueRef);
-  }
+  bool isUndefined();
+//  {
+//    return _isUndefined(context.ctxRef(), valueRef);
+//  }
 
   ///
   /// Tests whether the value is null
   /// @return  true if null, false otherwise
   /// @since 1.0
   ///
-  bool isNull() {
-    return _isNull(context.ctxRef(), valueRef);
-  }
+  bool isNull();
+//  {
+//    return _isNull(context.ctxRef(), valueRef);
+//  }
 
   /// Tests whether the value is boolean
   /// @return  true if boolean, false otherwise
   ///
-  bool isBoolean() {
-    return _isBoolean(context.ctxRef(), valueRef);
-  }
+  bool isBoolean();
+//  {
+//    return _isBoolean(context.ctxRef(), valueRef);
+//  }
 
   ///
   /// Tests whether the value is a number
   /// @return  true if a number, false otherwise
   ///
-  bool isNumber() {
-    return _isNumber(context.ctxRef(), valueRef);
-  }
+  bool isNumber();
+//  {
+//    return _isNumber(context.ctxRef(), valueRef);
+//  }
 
   ///
   /// Tests whether the value is a string
   /// @return  true if a string, false otherwise
   ///
-  bool isString() {
-    return _isString(context.ctxRef(), valueRef);
-  }
+  bool isString();
+//  {
+//    return _isString(context.ctxRef(), valueRef);
+//  }
 
   ///todo —— JSValueIsArray/JSValueIsDate 只有 OSX 10.11+ iOS 9.0+支持 android 目前美团里的jsc里没有
 //   ///
@@ -132,9 +128,10 @@ class JSValue {
   /// Tests whether the value is an object
   /// @return  true if an object, false otherwise
   ///
-  bool isObject() {
-    return _isObject(context.ctxRef(), valueRef);
-  }
+  bool isObject();
+//  {
+//    return _isObject(context.ctxRef(), valueRef);
+//  }
 
 //  /**
 //   * Tests whether a value in an instance of a constructor object
@@ -216,49 +213,52 @@ class JSValue {
 
   /// Gets the Boolean value of this JS value
   /// @return  the Boolean value
-  bool toBoolean() {
-    return _toBoolean(context.ctxRef(), valueRef);
-  }
+  bool toBoolean();
+//  {
+//    return _toBoolean(context.ctxRef(), valueRef);
+//  }
 
   /// Gets the numeric value of this JS value
   /// @return  The numeric value
   /// @since 1.0
-  double toNumber() {
-    CReturnValue cReturnValue = _toNumber(context.ctxRef(), valueRef);
-    if (cReturnValue.exception != 0) {
-      context.throwJSException(JSException.fromJSValue(
-          JSValue.fromValueRef(cReturnValue.exception, context)));
-      return 0.0;
-    }
-    return cReturnValue.number;
-  }
+  double toNumber();
+//  {
+//    CReturnValue cReturnValue = _toNumber(context.ctxRef(), valueRef);
+//    if (cReturnValue.exception != 0) {
+//      context.throwJSException(JSException.fromJSValue(
+//          JSValue.fromValueRef(cReturnValue.exception, context)));
+//      return 0.0;
+//    }
+//    return cReturnValue.number;
+//  }
 
   @override
-  String toString() {
-    try {
-      print ('toStringValue'+toStringValue(context.ctxRef(), valueRef) );
-      return toJSString().toString();
-    } on JSException catch (e) {
-      return e.toString();
-    }
-  }
+  String toString();
+//  {
+//    try {
+//      print ('toStringValue'+toStringValue(context.ctxRef(), valueRef) );
+//      return toJSString().toString();
+//    } on JSException catch (e) {
+//      return e.toString();
+//    }
+//  }
 
   static String toStringValue(int ctxRef, int valueRef) native 'JSValue_toStringValue';
 
   /// Gets the JSString value of this JS value
   /// @return  The JSString value
-  JSString toJSString() {
-    print('toJSString Entry $valueRef');
-    CReturnValue cReturnValue = _toStringCopy(context.ctxRef(), valueRef);
-    if (cReturnValue.exception != 0) {
-      context.throwJSException(JSException.fromJSValue(
-          JSValue.fromValueRef(cReturnValue.exception, context)));
-      return null;
-    }
-    print('toJSString'+ cReturnValue.reference.toString());
-    print('toJSString JSString'+ JSString(cReturnValue.reference).toString());
-    return JSString(cReturnValue.reference);
-  }
+//  JSString toJSString() {
+//    print('toJSString Entry $valueRef');
+//    CReturnValue cReturnValue = _toStringCopy(context.ctxRef(), valueRef);
+//    if (cReturnValue.exception != 0) {
+//      context.throwJSException(JSException.fromJSValue(
+//          JSValue.fromValueRef(cReturnValue.exception, context)));
+//      return null;
+//    }
+//    print('toJSString'+ cReturnValue.reference.toString());
+//    print('toJSString JSString'+ JSString(cReturnValue.reference).toString());
+//    return JSString(cReturnValue.reference);
+//  }
 
   /// If the JS value is an object, gets the JSObject
   /// @return  The JSObject for this value
@@ -436,12 +436,6 @@ class JSValue {
 
   static int makeNull(int ctx) native 'JSValue_makeNull';
 
-  static int makeBoolean(int ctx, bool bool) native 'JSValue_makeBoolean';
-
-  static int makeNumber(int ctx, double number) native 'JSValue_makeNumber';
-
-  static int makeString(int ctx, int stringRef) native 'JSValue_makeString';
-
   static int makeFromJSONString(int ctx, int stringRef)
       native 'JSValue_makeFromJSONString';
 
@@ -485,59 +479,4 @@ class CReturnValue extends NativeFieldWrapperClass4 {
 
 CReturnValue getCReturnValue() {
   return new CReturnValue();
-}
-
-class JSString {
-  int stringRef;
-
-  ///
-  /// Creates a JavaScript string from a Java string
-  /// OR  Wraps an existing JavaScript string
-  /// @param s  The Java string with which to initialize the JavaScript string
-  /// @param stringRef  The JavaScriptCore reference to the string
-  ///
-  JSString(final dynamic s) {
-    if (s == null) {
-      stringRef = 0;
-    } else if (s is int) {
-      stringRef = s;
-    } else {
-      stringRef = createWithCharacters(s);
-    }
-  }
-
-//  @Override
-//  protected void finalize() throws Throwable {
-//  super.finalize();
-//  if (stringRef != 0)
-//  release(stringRef);
-//  }
-
-  @override
-  String toString() {
-    return _toString(stringRef);
-  }
-
-  //native function
-  static int createWithCharacters(String str)
-      native 'JSString_createWithCharacters';
-
-  static int retain(int strRef) native 'JSString_retain';
-
-  static void release(int stringRef) native 'JSString_release';
-
-  static bool isEqual(int a, int b) native 'JSString_isEqual';
-
-  static String _toString(int strRef) native 'JSString_toString';
-
-  static int getLength(int stringRef) native 'JSString_getLength';
-
-  static int getMaximumUTF8CStringSize(int stringRef)
-      native 'JSString_getMaximumUTF8CStringSize';
-
-  static int createWithUTF8CString(String str)
-      native 'JSString_createWithUTF8CString';
-
-  static bool isEqualToUTF8CString(int a, String b)
-      native 'JSString_isEqualToUTF8CString';
 }

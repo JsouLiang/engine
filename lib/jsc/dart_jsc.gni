@@ -6,6 +6,9 @@ dart_jsc_files = [
   "$flutter_root/lib/jsc/jsc.dart",
   "$flutter_root/lib/jsc/JSError.dart",
   "$flutter_root/lib/jsc/JSException.dart",
+  "$flutter_root/lib/jsc/JSString.dart",
+  "$flutter_root/lib/jsc/JSNumber.dart",
+  "$flutter_root/lib/jsc/JSProperty.dart",
 ]
 
 dart_jsc_path = "$flutter_root/lib/jsc/jsc.dart"

@@ -46,6 +46,20 @@ class JSObject extends JSValue {
     valueRef = make(context.ctxRef(), 0);
     context.persistObject(this);
   }
+//
+//  get string(String name) {
+//    return property(name).toString();
+//  }
+//
+//
+//
+//  /// JSObject()
+//  /// {a: 1, b:2, c: ""}
+//  /// JSObject().number["a"] = 1;
+//  ///          ..number["b"] = 2;
+  JSProperty<String> string;
+  JSProperty<JSObject> object;
+  JSProperty<JSNumber> number;
 
   ///
   /// Wraps an existing object from JavaScript
