@@ -55,8 +55,7 @@ void ShaderMaskLayer::Paint(PaintContext& context) const {
     }
   }
 
-  Layer::AutoSaveLayer save = Layer::AutoSaveLayer::Create(
-      context, paint_bounds(), cache_paint.sk_paint());
+  auto save = context.state_stack.saveLayer(&paint_bounds());
   PaintChildren(context);
 
   SkPaint paint;
@@ -64,8 +63,8 @@ void ShaderMaskLayer::Paint(PaintContext& context) const {
   if (shader_) {
     paint.setShader(shader_->skia_object());
   }
-  context.leaf_nodes_canvas->translate(mask_rect_.left(), mask_rect_.top());
-  context.leaf_nodes_canvas->drawRect(
+  context.canvas->translate(mask_rect_.left(), mask_rect_.top());
+  context.canvas->drawRect(
       SkRect::MakeWH(mask_rect_.width(), mask_rect_.height()), paint);
 }
 
