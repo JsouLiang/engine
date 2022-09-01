@@ -5,6 +5,7 @@
 #include "flutter/flow/layers/opacity_layer.h"
 
 #include "flutter/flow/layers/cacheable_layer.h"
+#include "flutter/flow/layers/layer_state_stack.h"
 #include "third_party/skia/include/core/SkPaint.h"
 
 namespace flutter {
@@ -89,19 +90,6 @@ void OpacityLayer::Paint(PaintContext& context) const {
   SkScalar inherited_opacity = context.inherited_opacity;
   SkScalar subtree_opacity = opacity() * inherited_opacity;
 
-  if (children_can_accept_opacity()) {
-    context.inherited_opacity = subtree_opacity;
-    PaintChildren(context);
-    context.inherited_opacity = inherited_opacity;
-    return;
-  }
-
-  SkPaint paint;
-  paint.setAlphaf(subtree_opacity);
-
-  if (layer_raster_cache_item_->Draw(context, &paint)) {
-    return;
-  }
 
   // Skia may clip the content with saveLayerBounds (although it's not a
   // guaranteed clip). So we have to provide a big enough saveLayerBounds. To do
@@ -116,11 +104,27 @@ void OpacityLayer::Paint(PaintContext& context) const {
       .makeOffset(-offset_.fX, -offset_.fY)
       .roundOut(&saveLayerBounds);
 
-  auto save_layer =
-      context.state_stack.saveWithOpacity(&saveLayerBounds, subtree_opacity);
-  context.inherited_opacity = SK_Scalar1;
+  auto layer = context.state_stack.saveWithOpacity(&saveLayerBounds, subtree_opacity);
   PaintChildren(context);
-  context.inherited_opacity = inherited_opacity;
+
+  // if (children_can_accept_opacity()) {
+  //   context.inherited_opacity = subtree_opacity;
+  //   PaintChildren(context);
+  //   context.inherited_opacity = inherited_opacity;
+  //   return;
+  // }
+
+  // SkPaint paint;
+  // paint.setAlpha(subtree_opacity);
+
+  // if (layer_raster_cache_item_->Draw(context, &paint)) {
+  //   return;
+  // }
+
+  // auto save_layer = context.state_stack.saveWithOpacity(&saveLayerBounds, subtree_opacity);
+  // context.inherited_opacity = SK_Scalar1;
+  // PaintChildren(context);
+  // context.inherited_opacity = inherited_opacity;
 }
 
 }  // namespace flutter

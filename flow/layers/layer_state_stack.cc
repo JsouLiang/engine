@@ -3,8 +3,13 @@
 // found in the LICENSE file.
 
 #include "flutter/flow/layers/layer_state_stack.h"
+#include "flutter/display_list/display_list_builder.h"
+#include "flutter/display_list/display_list_paint.h"
+#include "flutter/flow/layers/layer.h"
 #include "flutter/flow/paint_utils.h"
-
+#include "flutter/flow/raster_cache.h"
+#include "include/core/SkPath.h"
+#include "include/core/SkScalar.h"
 namespace flutter {
 
 using AutoRestore = LayerStateStack::AutoRestore;
@@ -122,6 +127,17 @@ AutoRestore LayerStateStack::saveWithBackdropFilter(
   return ret;
 }
 
+AutoRestore LayerStateStack::saveWithDisplayList(
+    const SkRect* bounds,
+    const sk_sp<DisplayList> display_list,
+    bool checkerboard) {
+  auto ret = LayerStateStack::AutoRestore(this);
+  state_stack_.emplace_back(
+      std::make_unique<DisplayListEntry>(display_list, bounds, checkerboard));
+  state_stack_.back()->apply(&outstanding_, canvas_, builder_);
+  return ret;
+}
+
 void LayerStateStack::translate(SkScalar tx, SkScalar ty) {
   state_stack_.emplace_back(std::make_unique<TranslateEntry>(tx, ty));
   state_stack_.back()->apply(&outstanding_, canvas_, builder_);
@@ -182,14 +198,22 @@ void LayerStateStack::SaveEntry::restore(RenderingAttributes* attributes,
   do_checkerboard(canvas, builder);
 }
 
+
 void LayerStateStack::SaveLayerEntry::apply(RenderingAttributes* attributes,
                                             SkCanvas* canvas,
                                             DisplayListBuilder* builder) const {
   if (canvas) {
-    canvas->saveLayer(save_bounds(), nullptr);
+    if (attributes->opacity < SK_Scalar1) {
+      sk_paint_.setAlphaf(attributes->opacity);
+    }
+    canvas->saveLayer(save_bounds(), &sk_paint_);
   }
   if (builder) {
-    builder->saveLayer(save_bounds(), nullptr);
+    if (attributes->opacity < SK_Scalar1) {
+      dl_paint_.setAlpha(SkScalarRoundToInt(attributes->opacity * 255));
+      attributes->opacity = SK_Scalar1;
+    }
+    builder->saveLayer(save_bounds(), &dl_paint_);
   }
 }
 
@@ -204,6 +228,10 @@ void LayerStateStack::SaveLayerEntry::do_checkerboard(
       DlDrawCheckerboard(builder, bounds_);
     }
   }
+}
+
+void LayerStateStack::SaveLayerEntry::restore(RenderingAttributes *attributes, SkCanvas *canvas, DisplayListBuilder *builder) const {
+  attributes->opacity = sk_paint_.getAlphaf();
 }
 
 void LayerStateStack::OpacityEntry::apply(RenderingAttributes* attributes,
@@ -255,16 +283,15 @@ void LayerStateStack::ColorFilterEntry::apply(
     SkCanvas* canvas,
     DisplayListBuilder* builder) const {
   if (canvas) {
-    SkPaint paint;
-    paint.setColorFilter(filter_ ? filter_->skia_object() : nullptr);
-    canvas->saveLayer(save_bounds(), &paint);
+    sk_paint_.setColorFilter(filter_ ? filter_->skia_object() : nullptr);
   }
   if (builder) {
-    DlPaint paint;
-    paint.setColorFilter(filter_);
-    builder->saveLayer(save_bounds(), &paint);
+    dl_paint_.setColorFilter(filter_);
   }
+  SaveLayerEntry::apply(attributes, canvas, builder);
 }
+
+
 
 void LayerStateStack::BackdropFilterEntry::apply(
     RenderingAttributes* attributes,
@@ -373,6 +400,24 @@ void LayerStateStack::ClipPathEntry::apply(RenderingAttributes* attributes,
   }
   if (builder != nullptr) {
     builder->clipPath(path_, SkClipOp::kIntersect, is_aa_);
+  }
+}
+
+void LayerStateStack::DisplayListEntry::apply(
+    RenderingAttributes* attributes,
+    SkCanvas* canvas,
+    DisplayListBuilder* builder) const {
+  // if (canvas) {
+  //   display_list_.get()->RenderTo(canvas, paint->sk_paint()
+  //                                             ? paint->sk_paint()->getAlphaf()
+  //                                             : SK_Scalar1);
+  // }
+  if (builder) {
+    if (attributes->opacity < SK_Scalar1) {
+      auto paint = DlPaint().setAlpha(attributes->opacity);
+      builder->saveLayer(save_bounds(), &paint);
+    }
+    builder->drawDisplayList(display_list_);
   }
 }
 

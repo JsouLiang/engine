@@ -149,18 +149,22 @@ void DisplayListLayer::Paint(PaintContext& context) const {
     context.layer_snapshot_store->Add(snapshot_data);
   }
 
-  if (context.builder) {
-    // AutoCachePaint save_paint(context);
-    // int restore_count = context.leaf_nodes_builder->getSaveCount();
-    // if (save_paint.dl_paint() != nullptr) {
-    //   context.leaf_nodes_builder->saveLayer(&paint_bounds(),
-    //                                         save_paint.dl_paint());
-    // }
-    context.builder->drawDisplayList(display_list_.skia_object());
-    // context.leaf_nodes_builder->restoreToCount(restore_count);
-  } else {
-    display_list()->RenderTo(context.canvas, context.inherited_opacity);
-  }
+  auto saved_layer = context.state_stack.saveWithDisplayList(
+      &paint_bounds(), display_list_.skia_object());
+
+  // if (context.builder) {
+
+  //   // AutoCachePaint save_paint(context);
+  //   // int restore_count = context.leaf_nodes_builder->getSaveCount();
+  //   // if (save_paint.dl_paint() != nullptr) {
+  //   //   context.leaf_nodes_builder->saveLayer(&paint_bounds(),
+  //   //                                         save_paint.dl_paint());
+  //   // }
+  //   // context.builder->drawDisplayList(display_list_.skia_object());
+  //   // context.leaf_nodes_builder->restoreToCount(restore_count);
+  // } else {
+  //   display_list()->RenderTo(context.canvas, context.inherited_opacity);
+  // }
 }
 
 }  // namespace flutter

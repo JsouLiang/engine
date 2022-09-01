@@ -5,11 +5,16 @@
 #ifndef FLUTTER_FLOW_LAYERS_LAYER_STATE_STACK_H_
 #define FLUTTER_FLOW_LAYERS_LAYER_STATE_STACK_H_
 
+#include "flutter/display_list/display_list.h"
 #include "flutter/display_list/display_list_builder.h"
 #include "flutter/display_list/display_list_canvas_recorder.h"
+#include "flutter/display_list/display_list_paint.h"
+#include "include/core/SkPaint.h"
+#include "include/core/SkPath.h"
 
 namespace flutter {
 
+class AutoCachePaint;
 class LayerStateStack {
  public:
   LayerStateStack() = default;
@@ -45,22 +50,33 @@ class LayerStateStack {
 
   [[nodiscard]] AutoRestore save();
   [[nodiscard]] AutoRestore saveLayer(const SkRect* bounds,
+                                      
                                       bool checkerboard = false);
   [[nodiscard]] AutoRestore saveWithOpacity(const SkRect* bounds,
                                             SkScalar opacity,
+                                            
                                             bool checkerboard = false);
   [[nodiscard]] AutoRestore saveWithImageFilter(
       const SkRect* bounds,
       const std::shared_ptr<const DlImageFilter> filter,
+      
       bool checkerboard = false);
   [[nodiscard]] AutoRestore saveWithColorFilter(
       const SkRect* bounds,
       const std::shared_ptr<const DlColorFilter> filter,
+      
       bool checkerboard = false);
   [[nodiscard]] AutoRestore saveWithBackdropFilter(
       const SkRect* bounds,
       const std::shared_ptr<const DlImageFilter> filter,
       DlBlendMode blend_mode,
+      
+      bool checkerboard = false);
+
+  [[nodiscard]] AutoRestore saveWithDisplayList(
+      const SkRect* bounds,
+      const sk_sp<DisplayList> display_list,
+      
       bool checkerboard = false);
 
   void translate(SkScalar tx, SkScalar ty);
@@ -68,6 +84,7 @@ class LayerStateStack {
   void transform(const SkMatrix& matrix);
 
   void clipRect(const SkRect& rect, bool is_aa);
+
   void clipRRect(const SkRRect& rect, bool is_aa);
   void clipPath(const SkPath& rect, bool is_aa);
 
@@ -97,6 +114,10 @@ class LayerStateStack {
     virtual void restore(RenderingAttributes* attributes,
                          SkCanvas* canvas,
                          DisplayListBuilder* builder) const {}
+
+    protected:
+    mutable DlPaint dl_paint_;
+    mutable SkPaint sk_paint_;
   };
 
   class SaveEntry : public StateEntry {
@@ -105,6 +126,7 @@ class LayerStateStack {
 
     void apply(RenderingAttributes* attributes,
                SkCanvas* canvas,
+               
                DisplayListBuilder* builder) const override;
     void restore(RenderingAttributes* attributes,
                  SkCanvas* canvas,
@@ -123,8 +145,12 @@ class LayerStateStack {
           checkerboard_(checkerboard) {}
 
     void apply(RenderingAttributes* attributes,
-               SkCanvas* canvas,
+               SkCanvas* canvas,               
                DisplayListBuilder* builder) const override;
+
+    void restore(RenderingAttributes* attributes,
+                 SkCanvas* canvas,
+                 DisplayListBuilder* builder) const override;
 
    protected:
     const SkRect bounds_;
@@ -151,6 +177,7 @@ class LayerStateStack {
 
     void apply(RenderingAttributes* attributes,
                SkCanvas* canvas,
+               
                DisplayListBuilder* builder) const override;
     void restore(RenderingAttributes* attributes,
                  SkCanvas* canvas,
@@ -171,6 +198,7 @@ class LayerStateStack {
 
     void apply(RenderingAttributes* attributes,
                SkCanvas* canvas,
+               
                DisplayListBuilder* builder) const override;
 
    private:
@@ -187,6 +215,7 @@ class LayerStateStack {
 
     void apply(RenderingAttributes* attributes,
                SkCanvas* canvas,
+               
                DisplayListBuilder* builder) const override;
 
    private:
@@ -206,10 +235,12 @@ class LayerStateStack {
 
     void apply(RenderingAttributes* attributes,
                SkCanvas* canvas,
+               
                DisplayListBuilder* builder) const override;
 
     void reapply(RenderingAttributes* attributes,
                  SkCanvas* canvas,
+                 
                  DisplayListBuilder* builder) const override;
 
    private:
@@ -225,6 +256,7 @@ class LayerStateStack {
 
     void apply(RenderingAttributes* attributes,
                SkCanvas* canvas,
+               
                DisplayListBuilder* builder) const override;
 
    private:
@@ -238,6 +270,7 @@ class LayerStateStack {
 
     void apply(RenderingAttributes* attributes,
                SkCanvas* canvas,
+               
                DisplayListBuilder* builder) const override;
 
    private:
@@ -250,6 +283,7 @@ class LayerStateStack {
 
     void apply(RenderingAttributes* attributes,
                SkCanvas* canvas,
+               
                DisplayListBuilder* builder) const override;
 
    private:
@@ -270,6 +304,7 @@ class LayerStateStack {
 
     void apply(RenderingAttributes* attributes,
                SkCanvas* canvas,
+               
                DisplayListBuilder* builder) const override;
 
    private:
@@ -283,6 +318,7 @@ class LayerStateStack {
 
     void apply(RenderingAttributes* attributes,
                SkCanvas* canvas,
+               
                DisplayListBuilder* builder) const override;
 
    private:
@@ -297,10 +333,27 @@ class LayerStateStack {
 
     void apply(RenderingAttributes* attributes,
                SkCanvas* canvas,
+               
                DisplayListBuilder* builder) const override;
 
    private:
     const SkPath path_;
+  };
+
+  class DisplayListEntry : public SaveLayerEntry {
+   public:
+    DisplayListEntry(const sk_sp<DisplayList> display_list,
+                     const SkRect* bounds,
+                     bool checkerboard)
+        : SaveLayerEntry(bounds, checkerboard), display_list_(display_list) {}
+
+    void apply(RenderingAttributes* attributes,
+               SkCanvas* canvas,
+               
+               DisplayListBuilder* builder) const override;
+
+   private:
+    const sk_sp<DisplayList> display_list_;
   };
 
   std::vector<std::unique_ptr<StateEntry>> state_stack_;

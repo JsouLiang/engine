@@ -156,6 +156,59 @@ struct PaintContext {
   DisplayListBuilder* builder = nullptr;
 };
 
+class AutoCachePaint {
+ public:
+  explicit AutoCachePaint(PaintContext& context) : context_(context) {
+    needs_paint_ = context.inherited_opacity < SK_Scalar1;
+    if (needs_paint_) {
+      sk_paint_.setAlphaf(context.inherited_opacity);
+      dl_paint_.setAlpha(SkScalarRoundToInt(context.inherited_opacity * 255));
+      context.inherited_opacity = SK_Scalar1;
+    }
+  }
+
+  ~AutoCachePaint() { context_.inherited_opacity = sk_paint_.getAlphaf(); }
+
+  void setImageFilter(const DlImageFilter* filter) {
+    sk_paint_.setImageFilter(!filter ? nullptr : filter->skia_object());
+    dl_paint_.setImageFilter(filter);
+    update_needs_paint();
+  }
+
+  void setColorFilter(const DlColorFilter* filter) {
+    sk_paint_.setColorFilter(!filter ? nullptr : filter->skia_object());
+    dl_paint_.setColorFilter(filter);
+    update_needs_paint();
+  }
+
+  void setBlendMode(DlBlendMode mode) {
+    sk_paint_.setBlendMode(ToSk(mode));
+    dl_paint_.setBlendMode(mode);
+    update_needs_paint();
+  }
+
+  void setAlpha(float alpha) {
+    sk_paint_.setAlphaf(alpha);
+    dl_paint_.setAlpha(SkScalarRoundToInt(alpha * 255));
+    update_needs_paint();
+  }
+
+  const SkPaint* sk_paint() { return needs_paint_ ? &sk_paint_ : nullptr; }
+  const DlPaint* dl_paint() { return needs_paint_ ? &dl_paint_ : nullptr; }
+
+ private:
+  PaintContext& context_;
+  SkPaint sk_paint_;
+  DlPaint dl_paint_;
+  bool needs_paint_;
+
+  void update_needs_paint() {
+    needs_paint_ = sk_paint_.getImageFilter() != nullptr ||
+                   sk_paint_.getColorFilter() != nullptr ||
+                   !sk_paint_.isSrcOver() || sk_paint_.getAlphaf() < SK_Scalar1;
+  }
+};
+
 // Represents a single composited layer. Created on the UI thread but then
 // subquently used on the Rasterizer thread.
 class Layer {
@@ -212,54 +265,6 @@ class Layer {
     bool layer_itself_performs_readback_;
 
     bool prev_surface_needs_readback_;
-  };
-
-  class AutoCachePaint {
-   public:
-    explicit AutoCachePaint(PaintContext& context) : context_(context) {
-      needs_paint_ = context.inherited_opacity < SK_Scalar1;
-      if (needs_paint_) {
-        sk_paint_.setAlphaf(context.inherited_opacity);
-        dl_paint_.setAlpha(SkScalarRoundToInt(context.inherited_opacity * 255));
-        context.inherited_opacity = SK_Scalar1;
-      }
-    }
-
-    ~AutoCachePaint() { context_.inherited_opacity = sk_paint_.getAlphaf(); }
-
-    void setImageFilter(const DlImageFilter* filter) {
-      sk_paint_.setImageFilter(!filter ? nullptr : filter->skia_object());
-      dl_paint_.setImageFilter(filter);
-      update_needs_paint();
-    }
-
-    void setColorFilter(const DlColorFilter* filter) {
-      sk_paint_.setColorFilter(!filter ? nullptr : filter->skia_object());
-      dl_paint_.setColorFilter(filter);
-      update_needs_paint();
-    }
-
-    void setBlendMode(DlBlendMode mode) {
-      sk_paint_.setBlendMode(ToSk(mode));
-      dl_paint_.setBlendMode(mode);
-      update_needs_paint();
-    }
-
-    const SkPaint* sk_paint() { return needs_paint_ ? &sk_paint_ : nullptr; }
-    const DlPaint* dl_paint() { return needs_paint_ ? &dl_paint_ : nullptr; }
-
-   private:
-    PaintContext& context_;
-    SkPaint sk_paint_;
-    DlPaint dl_paint_;
-    bool needs_paint_;
-
-    void update_needs_paint() {
-      needs_paint_ = sk_paint_.getImageFilter() != nullptr ||
-                     sk_paint_.getColorFilter() != nullptr ||
-                     !sk_paint_.isSrcOver() ||
-                     sk_paint_.getAlphaf() < SK_Scalar1;
-    }
   };
 
   virtual void Paint(PaintContext& context) const = 0;
