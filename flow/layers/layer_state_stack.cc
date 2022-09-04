@@ -3,13 +3,8 @@
 // found in the LICENSE file.
 
 #include "flutter/flow/layers/layer_state_stack.h"
-#include "flutter/display_list/display_list_builder.h"
-#include "flutter/display_list/display_list_paint.h"
-#include "flutter/flow/layers/layer.h"
 #include "flutter/flow/paint_utils.h"
-#include "flutter/flow/raster_cache.h"
-#include "include/core/SkPath.h"
-#include "include/core/SkScalar.h"
+
 namespace flutter {
 
 using AutoRestore = LayerStateStack::AutoRestore;
@@ -50,16 +45,39 @@ AutoRestore::~AutoRestore() {
   stack_->restoreToCount(stack_restore_count_);
 }
 
-const RenderingAttributes LayerStateStack::applyOutstandingState(
-    int can_apply_flags) {
-  SkScalar cur_opacity = outstanding_.opacity;
-  if (cur_opacity >= SK_Scalar1 || (can_apply_flags & CAN_APPLY_OPACITY) != 0) {
-    return {cur_opacity};
-  } else {
-    resolve(nullptr, &outstanding_, canvas_, builder_);
-    outstanding_.opacity = SK_Scalar1;
-    return {SK_Scalar1};
+static bool needsResolve(RenderingAttributes& outstanding, int flags) {
+  if (outstanding.opacity < SK_Scalar1 &&
+      (flags & LayerStateStack::CALLER_CAN_APPLY_OPACITY)) {
+    return true;
   }
+  // Check IF and CF eventually...
+  return false;
+}
+
+AutoRestore LayerStateStack::applyState(const SkRect& bounds,
+                                        int can_apply_flags) {
+  auto ret = LayerStateStack::AutoRestore(this);
+  if (needsResolve(outstanding_, can_apply_flags)) {
+    resolve(bounds);
+  }
+  return ret;
+}
+
+const SkPaint* LayerStateStack::sk_paint() {
+  if (needsResolve(outstanding_, 0)) {
+    temp_sk_paint_.setAlphaf(outstanding_.opacity);
+    // set IF and CF eventually...
+    return &temp_sk_paint_;
+  }
+  return nullptr;
+}
+
+const DlPaint* LayerStateStack::dl_paint() {
+  if (outstanding_.opacity < SK_Scalar1) {
+    temp_dl_paint_.setOpacity(outstanding_.opacity);
+    return &temp_dl_paint_;
+  }
+  return nullptr;
 }
 
 AutoRestore LayerStateStack::save() {
@@ -70,24 +88,25 @@ AutoRestore LayerStateStack::save() {
 }
 
 AutoRestore LayerStateStack::saveLayer(const SkRect* bounds,
-                                       bool checkerboard) {
+                                       const SkRect* checker_bounds) {
   auto ret = LayerStateStack::AutoRestore(this);
   state_stack_.emplace_back(
-      std::make_unique<SaveLayerEntry>(bounds, checkerboard));
+      std::make_unique<SaveLayerEntry>(bounds, checker_bounds));
   state_stack_.back()->apply(&outstanding_, canvas_, builder_);
   return ret;
 }
 
 AutoRestore LayerStateStack::saveWithOpacity(const SkRect* bounds,
                                              SkScalar opacity,
-                                             bool checkerboard) {
+                                             const SkRect* checker_bounds) {
   auto ret = AutoRestore(this);
   if (opacity < SK_Scalar1) {
-    state_stack_.emplace_back(std::make_unique<OpacityEntry>(
-        bounds, outstanding_.opacity, opacity, checkerboard));
+    pushAttributes();
+    state_stack_.emplace_back(
+        std::make_unique<OpacityEntry>(bounds, opacity, checker_bounds));
   } else {
     state_stack_.emplace_back(
-        std::make_unique<SaveLayerEntry>(bounds, checkerboard));
+        std::make_unique<SaveLayerEntry>(bounds, checker_bounds));
   }
   state_stack_.back()->apply(&outstanding_, canvas_, builder_);
   return ret;
@@ -96,10 +115,10 @@ AutoRestore LayerStateStack::saveWithOpacity(const SkRect* bounds,
 AutoRestore LayerStateStack::saveWithImageFilter(
     const SkRect* bounds,
     const std::shared_ptr<const DlImageFilter> filter,
-    bool checkerboard) {
+    const SkRect* checker_bounds) {
   auto ret = LayerStateStack::AutoRestore(this);
   state_stack_.emplace_back(
-      std::make_unique<ImageFilterEntry>(bounds, filter, checkerboard));
+      std::make_unique<ImageFilterEntry>(bounds, filter, checker_bounds));
   state_stack_.back()->apply(&outstanding_, canvas_, builder_);
   return ret;
 }
@@ -107,10 +126,10 @@ AutoRestore LayerStateStack::saveWithImageFilter(
 AutoRestore LayerStateStack::saveWithColorFilter(
     const SkRect* bounds,
     const std::shared_ptr<const DlColorFilter> filter,
-    bool checkerboard) {
+    const SkRect* checker_bounds) {
   auto ret = LayerStateStack::AutoRestore(this);
   state_stack_.emplace_back(
-      std::make_unique<ColorFilterEntry>(bounds, filter, checkerboard));
+      std::make_unique<ColorFilterEntry>(bounds, filter, checker_bounds));
   state_stack_.back()->apply(&outstanding_, canvas_, builder_);
   return ret;
 }
@@ -119,21 +138,10 @@ AutoRestore LayerStateStack::saveWithBackdropFilter(
     const SkRect* bounds,
     const std::shared_ptr<const DlImageFilter> filter,
     DlBlendMode blend_mode,
-    bool checkerboard) {
+    const SkRect* checker_bounds) {
   auto ret = LayerStateStack::AutoRestore(this);
   state_stack_.emplace_back(std::make_unique<BackdropFilterEntry>(
-      bounds, filter, blend_mode, checkerboard));
-  state_stack_.back()->apply(&outstanding_, canvas_, builder_);
-  return ret;
-}
-
-AutoRestore LayerStateStack::saveWithDisplayList(
-    const SkRect* bounds,
-    const sk_sp<DisplayList> display_list,
-    bool checkerboard) {
-  auto ret = LayerStateStack::AutoRestore(this);
-  state_stack_.emplace_back(
-      std::make_unique<DisplayListEntry>(display_list, bounds, checkerboard));
+      bounds, filter, blend_mode, checker_bounds));
   state_stack_.back()->apply(&outstanding_, canvas_, builder_);
   return ret;
 }
@@ -175,6 +183,17 @@ void LayerStateStack::restoreToCount(size_t restore_count) {
   }
 }
 
+void LayerStateStack::pushAttributes() {
+  state_stack_.emplace_back(std::make_unique<AttributesEntry>(outstanding_));
+}
+
+void LayerStateStack::AttributesEntry::restore(
+    RenderingAttributes* attributes,
+    SkCanvas* canvas,
+    DisplayListBuilder* builder) const {
+  *attributes = attributes_;
+}
+
 void LayerStateStack::SaveEntry::apply(RenderingAttributes* attributes,
                                        SkCanvas* canvas,
                                        DisplayListBuilder* builder) const {
@@ -198,40 +217,29 @@ void LayerStateStack::SaveEntry::restore(RenderingAttributes* attributes,
   do_checkerboard(canvas, builder);
 }
 
-
 void LayerStateStack::SaveLayerEntry::apply(RenderingAttributes* attributes,
                                             SkCanvas* canvas,
                                             DisplayListBuilder* builder) const {
   if (canvas) {
-    if (attributes->opacity < SK_Scalar1) {
-      sk_paint_.setAlphaf(attributes->opacity);
-    }
-    canvas->saveLayer(save_bounds(), &sk_paint_);
+    canvas->saveLayer(save_bounds(), nullptr);
   }
   if (builder) {
-    if (attributes->opacity < SK_Scalar1) {
-      dl_paint_.setAlpha(SkScalarRoundToInt(attributes->opacity * 255));
-      attributes->opacity = SK_Scalar1;
-    }
-    builder->saveLayer(save_bounds(), &dl_paint_);
+    builder->saveLayer(save_bounds(), nullptr);
   }
 }
 
 void LayerStateStack::SaveLayerEntry::do_checkerboard(
     SkCanvas* canvas,
     DisplayListBuilder* builder) const {
-  if (checkerboard_ && has_bounds_) {
+  const SkRect* bounds = checkerboard_bounds();
+  if (bounds) {
     if (canvas) {
-      SkDrawCheckerboard(canvas, bounds_);
+      SkDrawCheckerboard(canvas, *bounds);
     }
     if (builder) {
-      DlDrawCheckerboard(builder, bounds_);
+      DlDrawCheckerboard(builder, *bounds);
     }
   }
-}
-
-void LayerStateStack::SaveLayerEntry::restore(RenderingAttributes *attributes, SkCanvas *canvas, DisplayListBuilder *builder) const {
-  attributes->opacity = sk_paint_.getAlphaf();
 }
 
 void LayerStateStack::OpacityEntry::apply(RenderingAttributes* attributes,
@@ -240,26 +248,26 @@ void LayerStateStack::OpacityEntry::apply(RenderingAttributes* attributes,
   attributes->opacity *= opacity_;
 }
 
-void LayerStateStack::OpacityEntry::restore(RenderingAttributes* attributes,
-                                            SkCanvas* canvas,
-                                            DisplayListBuilder* builder) const {
-  attributes->opacity = outstanding_opacity_;
-}
-
-void LayerStateStack::resolve(const SkRect* bounds,
-                              RenderingAttributes* attributes,
-                              SkCanvas* canvas,
-                              DisplayListBuilder* builder) {
-  if (canvas) {
+void LayerStateStack::resolve(const SkRect& bounds) {
+  if (!canvas_ && !builder_) {
+    return;
+  }
+  SkScalar opacity = outstanding_.opacity;
+  if (opacity >= SK_Scalar1) {
+    return;
+  }
+  pushAttributes();
+  if (canvas_) {
     SkPaint paint;
-    paint.setAlphaf(attributes->opacity);
-    canvas->saveLayer(bounds, &paint);
+    paint.setAlphaf(opacity);
+    canvas_->saveLayer(bounds, sk_paint());
   }
-  if (builder) {
+  if (builder_) {
     DlPaint paint;
-    paint.setAlpha(SkScalarRoundToInt(attributes->opacity * 255));
-    builder->saveLayer(bounds, &paint);
+    paint.setOpacity(opacity);
+    builder_->saveLayer(&bounds, dl_paint());
   }
+  outstanding_ = {};
 }
 
 void LayerStateStack::ImageFilterEntry::apply(
@@ -283,15 +291,16 @@ void LayerStateStack::ColorFilterEntry::apply(
     SkCanvas* canvas,
     DisplayListBuilder* builder) const {
   if (canvas) {
-    sk_paint_.setColorFilter(filter_ ? filter_->skia_object() : nullptr);
+    SkPaint paint;
+    paint.setColorFilter(filter_ ? filter_->skia_object() : nullptr);
+    canvas->saveLayer(save_bounds(), &paint);
   }
   if (builder) {
-    dl_paint_.setColorFilter(filter_);
+    DlPaint paint;
+    paint.setColorFilter(filter_);
+    builder->saveLayer(save_bounds(), &paint);
   }
-  SaveLayerEntry::apply(attributes, canvas, builder);
 }
-
-
 
 void LayerStateStack::BackdropFilterEntry::apply(
     RenderingAttributes* attributes,
@@ -400,24 +409,6 @@ void LayerStateStack::ClipPathEntry::apply(RenderingAttributes* attributes,
   }
   if (builder != nullptr) {
     builder->clipPath(path_, SkClipOp::kIntersect, is_aa_);
-  }
-}
-
-void LayerStateStack::DisplayListEntry::apply(
-    RenderingAttributes* attributes,
-    SkCanvas* canvas,
-    DisplayListBuilder* builder) const {
-  // if (canvas) {
-  //   display_list_.get()->RenderTo(canvas, paint->sk_paint()
-  //                                             ? paint->sk_paint()->getAlphaf()
-  //                                             : SK_Scalar1);
-  // }
-  if (builder) {
-    if (attributes->opacity < SK_Scalar1) {
-      auto paint = DlPaint().setAlpha(attributes->opacity);
-      builder->saveLayer(save_bounds(), &paint);
-    }
-    builder->drawDisplayList(display_list_);
   }
 }
 

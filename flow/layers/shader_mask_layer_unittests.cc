@@ -355,15 +355,14 @@ TEST_F(ShaderMaskLayerTest, OpacityInheritance) {
 
   // ShaderMaskLayers can always support opacity despite incompatible children
   PrerollContext* context = preroll_context();
-  context->subtree_can_inherit_opacity = false;
   shader_mask_layer->Preroll(context, SkMatrix::I());
-  EXPECT_TRUE(context->subtree_can_inherit_opacity);
+  EXPECT_EQ(context->rendering_state_flags,
+            LayerStateStack::CALLER_CAN_APPLY_OPACITY);
 
   int opacity_alpha = 0x7F;
   SkPoint offset = SkPoint::Make(10, 10);
   auto opacity_layer = std::make_shared<OpacityLayer>(opacity_alpha, offset);
   opacity_layer->Add(shader_mask_layer);
-  context->subtree_can_inherit_opacity = false;
   opacity_layer->Preroll(context, SkMatrix::I());
   EXPECT_TRUE(opacity_layer->children_can_accept_opacity());
 
@@ -373,17 +372,16 @@ TEST_F(ShaderMaskLayerTest, OpacityInheritance) {
     {
       expected_builder.translate(offset.fX, offset.fY);
       /* ShaderMaskLayer::Paint() */ {
-        expected_builder.setColor(opacity_alpha << 24);
-        expected_builder.saveLayer(&child_path.getBounds(), true);
+        DlPaint sl_paint = DlPaint().setColor(opacity_alpha << 24);
+        expected_builder.saveLayer(&child_path.getBounds(), &sl_paint);
         {
           /* child layer paint */ {
-            expected_builder.setColor(0xFF000000);
-            expected_builder.drawPath(child_path);
+            expected_builder.drawPath(child_path, DlPaint());
           }
           expected_builder.translate(mask_rect.fLeft, mask_rect.fTop);
-          expected_builder.setBlendMode(DlBlendMode::kSrc);
           expected_builder.drawRect(
-              SkRect::MakeWH(mask_rect.width(), mask_rect.height()));
+              SkRect::MakeWH(mask_rect.width(), mask_rect.height()),
+              DlPaint().setBlendMode(DlBlendMode::kSrc));
         }
         expected_builder.restore();
       }
